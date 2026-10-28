@@ -1,0 +1,2385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise Nubank Avançada | Importador CSV e PDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .header h1 { font-size: 24px; margin-bottom: 8px; color: #333; }
+        .header p { color: #666; font-size: 14px; }
+        
+        .login-card { background: white; border-radius: 8px; padding: 24px; margin: 0 auto 20px; max-width: 460px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .login-card h2 { font-size: 18px; margin-bottom: 6px; color: #333; }
+        .login-card p.sub { font-size: 13px; color: #666; margin-bottom: 16px; line-height: 1.5; }
+        .login-card label { display: block; font-size: 12px; color: #555; margin: 10px 0 4px; }
+        .login-card input[type=text], .login-card input[type=password] { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .login-card .keep { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555; margin: 12px 0 16px; }
+        .login-card .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+        .login-card .btns button { flex: 1; padding: 10px 14px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .login-card .btn-main { background: #1976D2; color: white; }
+        .login-card .btn-alt { background: #f0f0f0; color: #333; }
+        .login-card .msg { margin-top: 12px; font-size: 13px; min-height: 18px; }
+        .login-card .msg.err { color: #d32f2f; }
+        .login-card .msg.ok { color: #388E3C; }
+        .sync-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: white; border-radius: 8px; padding: 10px 16px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 13px; }
+        .sync-bar .who { font-weight: 600; color: #333; }
+        .sync-bar .st { flex: 1; color: #666; }
+        .sync-bar .st.ok { color: #388E3C; }
+        .sync-bar .st.err { color: #d32f2f; }
+        .sync-bar button { padding: 6px 12px; border: 1px solid #ccc; background: white; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .fatura-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: white; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 13px; }
+        .fatura-bar select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; min-width: 260px; }
+        .fatura-bar button { padding: 7px 12px; border: 1px solid #f0c4c4; background: white; color: #d32f2f; border-radius: 6px; font-size: 12px; cursor: pointer; }
+
+        .people-panel { background: white; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .people-panel h2 { font-size: 14px; margin-bottom: 4px; color: #333; }
+        .people-panel .pp-sub { font-size: 12px; color: #777; margin-bottom: 12px; }
+        .pp-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .pp-chip { display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px; border-radius: 999px; border: 1px solid #ddd; font-size: 13px; background: #fafafa; }
+        .pp-dot { width: 9px; height: 9px; border-radius: 50%; }
+        .pp-badge { font-size: 10px; font-weight: 700; color: #1976D2; background: #E3F2FD; padding: 2px 6px; border-radius: 999px; }
+        .pp-icon { border: none; background: none; cursor: pointer; font-size: 13px; padding: 2px 4px; border-radius: 4px; color: #666; }
+        .pp-icon:hover { background: #eee; }
+        .pp-icon.del { color: #d32f2f; }
+        .pp-add { display: flex; gap: 8px; max-width: 420px; }
+        .pp-add input { flex: 1; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        .pp-add button { padding: 8px 14px; background: #1976D2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .pp-add button:hover { background: #1565C0; }
+        .pp-first { background: #FFF8E1; border: 1px solid #FFE082; border-radius: 6px; padding: 12px; }
+        .pp-first p { font-size: 13px; color: #6D4C00; margin-bottom: 8px; }
+
+        .import-section { background: #E8F5E9; border: 2px dashed #4CAF50; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .import-section h2 { font-size: 14px; margin-bottom: 12px; color: #1B5E20; }
+        
+        .file-input-wrap { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+        .file-input-wrap input[type="file"] { flex: 1; padding: 10px; border: 1px solid #81C784; border-radius: 4px; cursor: pointer; }
+        .file-input-wrap button { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .file-input-wrap button:hover { background: #45a049; }
+        
+        .import-info { font-size: 12px; color: #1B5E20; }
+        .import-status { padding: 8px 12px; border-radius: 4px; margin-top: 10px; font-size: 12px; }
+        .status-success { background: #C8E6C9; color: #1B5E20; }
+        .status-error { background: #FFCDD2; color: #C62828; }
+        .status-info { background: #B3E5FC; color: #01579B; }
+        
+        .instructions { background: #E3F2FD; border: 1px solid #90CAF9; border-radius: 4px; padding: 12px; margin-bottom: 15px; font-size: 12px; color: #1565C0; line-height: 1.5; }
+        
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .metric { background: white; padding: 12px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .metric-label { font-size: 11px; color: #999; text-transform: uppercase; margin-bottom: 6px; }
+        .metric-value { font-size: 18px; font-weight: 600; color: #333; }
+        
+        .main-grid { display: grid; grid-template-columns: 2.5fr 1fr; gap: 20px; }
+        
+        .transactions { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .tx-header { padding: 15px 20px; border-bottom: 1px solid #eee; }
+        .tx-header h2 { font-size: 14px; margin-bottom: 12px; }
+        .search-filter { display: flex; gap: 8px; }
+        .search-filter input, .search-filter select { flex: 1; padding: 7px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+        
+        .tx-list { max-height: 700px; overflow-y: auto; }
+        .tx-item { 
+            display: grid; 
+            grid-template-columns: 70px 1fr 80px 110px; 
+            gap: 10px; 
+            align-items: center; 
+            padding: 12px 15px; 
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .tx-item:hover { background: #f9f9f9; }
+        .tx-item.expanded { background: #e3f2fd; }
+        
+        .tx-date { font-size: 11px; color: #999; }
+        .tx-desc { }
+        .tx-desc-title { font-size: 12px; color: #333; margin-bottom: 2px; font-weight: 500; }
+        .tx-desc-cat { font-size: 11px; color: #999; }
+        .tx-value { font-weight: 500; color: #333; text-align: right; }
+        .tx-owner { }
+        .tx-owner select { width: 100%; padding: 5px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; }
+        
+        .tx-expanded { 
+            grid-column: 1 / -1; 
+            background: #f9f9f9; 
+            padding: 15px; 
+            border: 1px solid #e0e0e0;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        
+        .split-section { margin-bottom: 15px; }
+        .split-section h4 { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: #333; }
+        
+        .split-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .split-input { display: flex; flex-direction: column; }
+        .split-input label { font-size: 11px; color: #666; margin-bottom: 4px; }
+        .split-input input, .split-input select { padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px; }
+        
+        .split-buttons { display: flex; gap: 8px; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500; }
+        .btn-add { background: #4CAF50; color: white; }
+        .btn-add:hover { background: #45a049; }
+        .btn-close { background: #f0f0f0; color: #333; }
+        .btn-close:hover { background: #e0e0e0; }
+        
+        .split-display { display: flex; gap: 10px; flex-wrap: wrap; }
+        .split-tag { 
+            background: white; 
+            border: 1px solid #ddd; 
+            padding: 6px 10px; 
+            border-radius: 4px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .split-remove { cursor: pointer; color: #d32f2f; font-weight: bold; }
+        
+        .sidebar { display: flex; flex-direction: column; gap: 15px; }
+        
+        .person-card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 15px; }
+        .person-header { font-size: 13px; font-weight: 600; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 2px solid; }
+        
+        .person-header.thaina { border-bottom-color: #1976D2; color: #1976D2; }
+        .person-header.mae { border-bottom-color: #F57C00; color: #F57C00; }
+        .person-header.leticia { border-bottom-color: #D32F2F; color: #D32F2F; }
+        .person-header.batista { border-bottom-color: #388E3C; color: #388E3C; }
+        .person-header.outro { border-bottom-color: #7B1FA2; color: #7B1FA2; }
+        
+        .person-value { font-size: 22px; font-weight: 700; }
+        .person-count { font-size: 11px; color: #999; margin-top: 4px; }
+        
+        .add-person-section { background: #FFF9C4; border: 1px solid #FBC02D; padding: 12px; border-radius: 4px; }
+        .add-person-section h3 { font-size: 12px; margin-bottom: 8px; color: #F57F17; }
+        .add-person-input { display: flex; gap: 8px; }
+        .add-person-input input { flex: 1; padding: 6px; border: 1px solid #FBC02D; border-radius: 4px; font-size: 11px; }
+        .add-person-input button { padding: 6px 12px; background: #FBC02D; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; }
+        
+        .summary { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; margin-top: 20px; }
+        .summary h2 { font-size: 16px; margin-bottom: 15px; }
+        
+        .summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .summary-table th { text-align: left; padding: 10px; background: #f5f5f5; border-bottom: 1px solid #ddd; font-weight: 600; }
+        .summary-table td { padding: 10px; border-bottom: 1px solid #eee; }
+        .total-row { font-weight: 600; background: #f5f5f5; }
+        
+        .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+        .empty-state h3 { margin-bottom: 8px; color: #666; }
+        
+        /* Divisão entre N pessoas */
+        .split-row { display: grid; grid-template-columns: 1fr 140px 32px; gap: 10px; align-items: end; margin-bottom: 8px; }
+        .split-row label { display: block; font-size: 11px; color: #666; margin-bottom: 4px; }
+        .split-row select, .split-row input { width: 100%; padding: 7px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        .split-row-remove { height: 33px; border: 1px solid #e0e0e0; background: white; border-radius: 4px; color: #d32f2f; cursor: pointer; }
+        .split-row-remove:disabled { color: #ccc; cursor: default; }
+        .split-tools { display: flex; gap: 16px; margin: 4px 0 8px; }
+        .btn-link { background: none; border: none; color: #1976D2; font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 0; }
+        .btn-link:hover { text-decoration: underline; }
+        .split-remaining { font-size: 12px; margin-bottom: 10px; }
+        .split-remaining.ok { color: #388E3C; }
+        .split-remaining.err { color: #d32f2f; }
+
+        /* Categoria editável na lista */
+        .tx-cat-select { margin-top: 3px; padding: 2px 4px; border: 1px solid transparent; border-radius: 4px; font-size: 11px; color: #777; background: #fafafa; cursor: pointer; max-width: 100%; }
+        .tx-cat-select:hover, .tx-cat-select:focus { border-color: #ccc; color: #333; }
+
+        /* Abas */
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: white; padding: 6px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .tab-btn { flex: 1; padding: 10px 16px; border: none; background: transparent; border-radius: 6px; font-size: 13px; font-weight: 600; color: #666; cursor: pointer; }
+        .tab-btn:hover { background: #f5f5f5; }
+        .tab-btn.active { background: #1976D2; color: white; }
+        .tab-btn:focus-visible { outline: 2px solid #1976D2; outline-offset: 2px; }
+
+        /* ===== Aba Por categoria (visual do relatório mensal) ===== */
+        #tab-categorias, .ca-scope {
+            --ca-text: #1f1f1e; --ca-sec: #6d6b67; --ca-bg2: #f3f3f0; --ca-border: #e4e3dd; --ca-border2: #c3c2b7;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem;
+        }
+        .ca-header { margin-bottom: 1rem; }
+        .ca-header h1 { font-size: 18px; font-weight: 500; color: var(--ca-text); margin: 0 0 4px; }
+        .ca-header p { font-size: 13px; color: var(--ca-sec); margin: 0; }
+        .ca-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.5rem; }
+        .ca-chip { padding: 6px 14px; border-radius: 999px; border: 1px solid var(--ca-border2); background: white; font-size: 12px; color: var(--ca-text); cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        .ca-chip:hover { background: var(--ca-bg2); }
+        .ca-chip.active { color: white; border-color: transparent; }
+        .ca-chip .ca-chip-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .ca-chip.active .ca-chip-dot { background: white !important; }
+        .ca-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+        .ca-metric { background: var(--ca-bg2); border-radius: 8px; padding: 12px 14px; }
+        .ca-metric-label { font-size: 11px; color: var(--ca-sec); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .ca-metric-value { font-size: 20px; font-weight: 500; color: var(--ca-text); }
+        .ca-metric-value.highlight { color: #A32D2D; }
+        .ca-metric-value.small { font-size: 15px; }
+        .ca-card { background: white; border: 0.5px solid var(--ca-border); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+        .ca-card-title { font-size: 11px; font-weight: 500; color: var(--ca-sec); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 1rem; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .ca-split-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .ca-split-box { border-radius: 12px; padding: 1rem; }
+        .ca-split-title { font-size: 13px; font-weight: 500; color: var(--ca-text); margin-bottom: 0.5rem; }
+        .ca-split-value { font-size: 24px; font-weight: 600; margin-bottom: 0.25rem; }
+        .ca-split-sub { font-size: 11px; color: var(--ca-sec); }
+        .ca-cat-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; align-items: center; }
+        .ca-bar-list { display: flex; flex-direction: column; gap: 8px; }
+        .ca-bar-row { display: flex; align-items: center; gap: 8px; }
+        .ca-bar-name { font-size: 12px; color: var(--ca-text); width: 140px; flex-shrink: 0; }
+        .ca-bar-wrap { flex: 1; background: var(--ca-bg2); border-radius: 4px; height: 6px; overflow: hidden; }
+        .ca-bar-fill { height: 6px; border-radius: 4px; transition: width 0.3s; }
+        .ca-bar-amt { font-size: 12px; color: var(--ca-sec); width: 85px; text-align: right; flex-shrink: 0; }
+        .ca-chart-box { position: relative; width: 100%; height: 220px; }
+        .ca-cat-section { border-bottom: 0.5px solid var(--ca-border); }
+        .ca-cat-section:last-child { border-bottom: none; }
+        .ca-cat-section summary { display: flex; align-items: center; gap: 8px; padding: 10px 0; cursor: pointer; list-style: none; }
+        .ca-cat-section summary::-webkit-details-marker { display: none; }
+        .ca-cat-section summary::after { content: '▸'; color: var(--ca-sec); font-size: 11px; transition: transform 0.2s; }
+        .ca-cat-section[open] summary::after { transform: rotate(90deg); }
+        .ca-cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .ca-cat-name { font-size: 13px; font-weight: 500; color: var(--ca-text); flex: 1; }
+        .ca-cat-total { font-size: 13px; font-weight: 500; color: var(--ca-text); }
+        .ca-cat-pct { font-size: 11px; color: var(--ca-sec); margin-left: 6px; width: 44px; text-align: right; }
+        .ca-cat-items { padding: 0 0 10px 18px; }
+        .ca-insight { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 0.5px solid var(--ca-border); }
+        .ca-insight:last-child { border-bottom: none; }
+        .ca-insight-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+        .ca-insight-text { font-size: 13px; color: var(--ca-text); line-height: 1.5; }
+        .ca-insight-text strong { font-weight: 600; }
+        .ca-alert-box { background: #FCEBEB; border: 0.5px solid #E6B9B9; border-radius: 8px; padding: 12px; margin-bottom: 1rem; }
+        .ca-alert-text { font-size: 13px; color: #A32D2D; line-height: 1.5; }
+        .ca-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .ca-table th { text-align: left; padding: 6px 8px; color: var(--ca-sec); font-weight: 500; border-bottom: 0.5px solid var(--ca-border); font-size: 11px; text-transform: uppercase; }
+        .ca-table td { padding: 6px 8px; border-bottom: 0.5px solid var(--ca-border); color: var(--ca-text); }
+        .ca-table tr:last-child td { border-bottom: none; }
+        .ca-table .ca-total-row td { border-top: 0.5px solid var(--ca-border2); font-weight: 600; }
+        .ca-table .num { text-align: right; white-space: nowrap; }
+        .ca-copy-btn { padding: 5px 10px; border: 1px solid var(--ca-border2); background: white; border-radius: 6px; font-size: 11px; cursor: pointer; text-transform: none; letter-spacing: 0; color: var(--ca-text); }
+        .ca-copy-btn:hover { background: var(--ca-bg2); }
+        .ca-empty { text-align: center; padding: 30px; color: var(--ca-sec); font-size: 13px; }
+
+        /* Fonte (cartão / fora / total) */
+        .ca-source { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+        .ca-source button { flex: 1; min-width: 150px; text-align: left; padding: 10px 12px; border: 1px solid var(--ca-border2); border-radius: 8px; background: white; cursor: pointer; }
+        .ca-source button .lbl { display: block; font-size: 11px; color: var(--ca-sec); text-transform: uppercase; letter-spacing: 0.03em; }
+        .ca-source button .val { display: block; font-size: 16px; font-weight: 600; color: var(--ca-text); margin-top: 2px; }
+        .ca-source button.active { border-color: #1976D2; background: #E3F2FD; box-shadow: inset 0 0 0 1px #1976D2; }
+        .ca-month { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ca-sec); margin-bottom: 12px; }
+        .ca-month select { padding: 6px 8px; border: 1px solid var(--ca-border2); border-radius: 6px; font-size: 13px; }
+        .ca-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; background: #FFF3E0; color: #B45309; margin-left: 4px; vertical-align: middle; }
+
+        /* Abas Meus gastos e Promissórias */
+        .ca-scope { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 1.5rem; }
+        .fm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+        .fm-grid .wide { grid-column: span 2; }
+        .fm-field label { display: block; font-size: 11px; color: var(--ca-sec); margin-bottom: 4px; }
+        .fm-field input, .fm-field select { width: 100%; padding: 8px 10px; border: 1px solid var(--ca-border2); border-radius: 6px; font-size: 13px; background: white; }
+        .fm-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .fm-btn { padding: 9px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: #1976D2; color: white; }
+        .fm-btn:hover { background: #1565C0; }
+        .fm-btn.sec { background: var(--ca-bg2); color: var(--ca-text); }
+        .fm-hint { font-size: 12px; color: var(--ca-sec); }
+        .ic-btn { border: none; background: none; cursor: pointer; padding: 3px 6px; border-radius: 4px; font-size: 13px; }
+        .ic-btn:hover { background: var(--ca-bg2); }
+        .monthnav { display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+        .monthnav select { padding: 7px 10px; border: 1px solid var(--ca-border2); border-radius: 6px; font-size: 13px; }
+        .monthnav button { padding: 6px 10px; border: 1px solid var(--ca-border2); background: white; border-radius: 6px; cursor: pointer; }
+        .forma-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--ca-bg2); }
+        .pr-card { border: 0.5px solid var(--ca-border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+        .pr-card.quitada { opacity: 0.7; }
+        .pr-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+        .pr-title { font-size: 14px; font-weight: 600; color: var(--ca-text); }
+        .pr-sub { font-size: 12px; color: var(--ca-sec); margin-top: 2px; }
+        .pr-origem { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #EDE7F6; color: #4527A0; margin-left: 6px; }
+        .pr-progress { height: 6px; background: var(--ca-bg2); border-radius: 4px; overflow: hidden; margin: 10px 0 6px; }
+        .pr-progress div { height: 6px; background: #388E3C; border-radius: 4px; }
+        .pr-nums { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--ca-sec); }
+        .pr-nums strong { color: var(--ca-text); }
+        .pr-parcelas { margin-top: 10px; }
+        .pr-parcelas summary { cursor: pointer; font-size: 12px; color: #1976D2; font-weight: 600; }
+        .pr-row { display: grid; grid-template-columns: 28px 1fr auto auto; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 0.5px solid var(--ca-border); font-size: 13px; }
+        .pr-row:last-child { border-bottom: none; }
+        .pr-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+        .pr-row input[type=date] { padding: 4px 6px; border: 1px solid var(--ca-border2); border-radius: 4px; font-size: 12px; }
+        .st { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+        .st.paga { background: #EAF3DE; color: #27500A; }
+        .st.atrasada { background: #FCEBEB; color: #A32D2D; }
+        .st.avencer { background: #E6F1FB; color: #0C447C; }
+        .pp-backup { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; align-items: center; }
+        .pp-backup button { padding: 7px 12px; border: 1px solid #ccc; background: white; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .pp-backup button:hover { background: #f5f5f5; }
+        .pp-backup span { font-size: 11px; color: #888; }
+
+        @media (max-width: 900px) {
+            .fm-grid .wide { grid-column: auto; }
+            .ca-split-container, .ca-cat-grid { grid-template-columns: 1fr; }
+            .ca-bar-name { width: 100px; }
+            .main-grid { grid-template-columns: 1fr; }
+            .split-inputs { grid-template-columns: 1fr; }
+            .tx-item { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Análise Nubank Avançada</h1>
+            <p>Importe sua fatura do Nubank e divida gastos entre pessoas</p>
+        </div>
+        
+        <div id="login-card" class="login-card" style="display:none;">
+            <h2>☁️ Entrar</h2>
+            <p class="sub">Seus dados ficam salvos na planilha, numa aba só sua. Use o mesmo nome e código em qualquer aparelho.</p>
+            <label for="login-nome">Seu nome</label>
+            <input type="text" id="login-nome" autocomplete="username">
+            <label for="login-codigo">Código (mínimo 4 dígitos)</label>
+            <input type="password" id="login-codigo" inputmode="numeric" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin(false)">
+            <label class="keep"><input type="checkbox" id="login-keep" checked> Manter conectado neste aparelho</label>
+            <div class="btns">
+                <button class="btn-main" id="login-btn" onclick="doLogin(false)">Entrar</button>
+                <button class="btn-alt" id="register-btn" onclick="doLogin(true)">Criar meu acesso</button>
+            </div>
+            <div class="msg" id="login-msg"></div>
+        </div>
+
+        <div id="app-body">
+        <div class="sync-bar" id="sync-bar" style="display:none;">
+            <span class="who" id="sync-who"></span>
+            <span class="st" id="sync-status"></span>
+            <button onclick="doSync(true)">🔄 Salvar agora</button>
+            <button onclick="doLogout()">Sair</button>
+        </div>
+
+        <div class="people-panel">
+            <h2>👥 Pessoas</h2>
+            <p class="pp-sub" id="pp-sub">Quem usa o cartão. Os nomes ficam salvos para as próximas faturas.</p>
+            <div id="people-panel-body"></div>
+            <div class="pp-backup">
+                <button onclick="exportBackup()">💾 Exportar backup</button>
+                <button onclick="document.getElementById('backup-input').click()">📂 Importar backup</button>
+                <input type="file" id="backup-input" accept=".json,application/json" style="display:none" onchange="importBackup(this)">
+                <button id="connect-btn" onclick="connectSheet()">☁️ Conectar planilha Google</button>
+                <span>O backup guarda pessoas, faturas, gastos e promissórias num arquivo .json</span>
+            </div>
+        </div>
+
+        <div class="import-section">
+            <h2>📥 Importar Fatura do Cartão</h2>
+            <div class="file-input-wrap">
+                <input type="file" id="csv-input" accept=".csv,.pdf,application/pdf,text/csv">
+                <button id="import-btn" onclick="importFile()">📤 Carregar Fatura</button>
+            </div>
+            <div class="import-info">
+                ℹ️ Aceita o <strong>PDF da fatura</strong> do Nubank ou do Banco do Brasil (Ourocard), ou o <strong>CSV</strong> exportado pelo Nubank (date, title, amount). O arquivo é lido neste navegador. Ao importar de novo a fatura do mesmo mês, o app só acrescenta o que é novo e mantém suas divisões.
+            </div>
+            <div id="import-status"></div>
+        </div>
+        
+        <div id="main-content">
+            <div class="tabs" role="tablist">
+                <button class="tab-btn active" id="tabbtn-transacoes" role="tab" onclick="switchTab('transacoes')">📋 Transações</button>
+                <button class="tab-btn" id="tabbtn-categorias" role="tab" onclick="switchTab('categorias')">📊 Por categoria</button>
+                <button class="tab-btn" id="tabbtn-gastos" role="tab" onclick="switchTab('gastos')">💵 Meus gastos</button>
+                <button class="tab-btn" id="tabbtn-promissorias" role="tab" onclick="switchTab('promissorias')">📝 Promissórias</button>
+            </div>
+
+            <div id="tab-transacoes">
+            <div class="fatura-bar" id="fatura-bar" style="display:none;"></div>
+            <div id="empty-state" class="empty-state">
+                <h3>📁 Nenhuma fatura carregada</h3>
+                <p>Importe o PDF ou o CSV da fatura para começar a análise</p>
+            </div>
+            <div id="fatura-content" style="display:none;">
+            <div class="instructions">
+                💡 <strong>Como usar:</strong> 
+                <br>• Clique em qualquer transação para expandir e dividir entre pessoas
+                <br>• Para dividir entre mais de 2 pessoas, use "➕ Adicionar pessoa" e depois "Salvar divisão"
+                <br>• Clique na categoria abaixo do nome para corrigir ou criar uma nova
+                <br>• Cadastre, renomeie ou remova pessoas no painel 👥 Pessoas, no topo
+                <br>• Tudo recalcula automaticamente
+            </div>
+            
+            <div class="metrics" id="metrics-container"></div>
+            
+            <div class="main-grid">
+                <div class="transactions">
+                    <div class="tx-header">
+                        <h2>Transações</h2>
+                        <div class="search-filter">
+                            <input type="text" id="search" placeholder="Buscar...">
+                            <select id="filter-category">
+                                <option value="">Categoria</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="tx-list" id="tx-list"></div>
+                </div>
+                
+                <div class="sidebar">
+                    <div id="people-container"></div>
+                    
+                    <div class="add-person-section">
+                        <h3>➕ Nova Pessoa</h3>
+                        <div class="add-person-input">
+                            <input type="text" id="new-person-name" placeholder="Nome">
+                            <button onclick="addNewPerson()">Adicionar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary">
+                <h2>📋 Resumo Final por Pessoa</h2>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Pessoa</th>
+                            <th style="text-align:right">Total (R$)</th>
+                            <th style="text-align:right">Transações</th>
+                            <th style="text-align:right">% do total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-body">
+                    </tbody>
+                </table>
+            </div>
+            </div><!-- /fatura-content -->
+            </div><!-- /tab-transacoes -->
+
+            <div id="tab-categorias" style="display:none;">
+                <div class="ca-header">
+                    <h1>Análise por categoria</h1>
+                    <p id="ca-subtitle"></p>
+                </div>
+                <div class="ca-source" id="ca-source"></div>
+                <div class="ca-month" id="ca-month"></div>
+                <div class="ca-filter" id="ca-filter"></div>
+                <div id="ca-content"></div>
+            </div>
+
+            <!-- ===== Aba Meus gastos ===== -->
+            <div id="tab-gastos" class="ca-scope" style="display:none;">
+                <div class="ca-header">
+                    <h1>Meus gastos fora do cartão</h1>
+                    <p>Dinheiro, Pix, débito e outros pagamentos. Gastos parcelados aparecem em cada mês, uma parcela por mês.</p>
+                </div>
+                <div class="ca-card">
+                    <p class="ca-card-title" id="g-form-title">Novo gasto</p>
+                    <div class="fm-grid">
+                        <div class="fm-field"><label>Data</label><input type="date" id="g-data"></div>
+                        <div class="fm-field wide"><label>O que foi</label><input type="text" id="g-desc" placeholder="Ex.: Feira, gasolina, presente"></div>
+                        <div class="fm-field"><label>Valor total (R$)</label><input type="number" id="g-valor" step="0.01" min="0" placeholder="0,00"></div>
+                        <div class="fm-field"><label>Forma de pagamento</label><select id="g-forma"></select></div>
+                        <div class="fm-field"><label>Categoria</label><select id="g-cat" onchange="if(this.value==='__nova'){ const n = promptNewCategory(); renderGastoCatSelect(n || ''); }"></select></div>
+                        <div class="fm-field"><label>Parcelas</label><input type="number" id="g-parc" min="1" max="72" step="1" value="1"></div>
+                    </div>
+                    <div class="fm-actions">
+                        <button class="fm-btn" id="g-save-btn" onclick="saveGasto()">➕ Adicionar gasto</button>
+                        <button class="fm-btn sec" id="g-cancel-btn" style="display:none" onclick="cancelEditGasto()">Cancelar edição</button>
+                        <span class="fm-hint" id="g-hint"></span>
+                    </div>
+                </div>
+                <div class="monthnav">
+                    <button onclick="shiftGastosMonth(-1)" title="Mês anterior">◀</button>
+                    <select id="g-month" onchange="gastosMonth = this.value; renderGastosTab();"></select>
+                    <button onclick="shiftGastosMonth(1)" title="Próximo mês">▶</button>
+                </div>
+                <div id="g-content"></div>
+            </div>
+
+            <!-- ===== Aba Promissórias ===== -->
+            <div id="tab-promissorias" class="ca-scope" style="display:none;">
+                <div class="ca-header">
+                    <h1>Promissórias</h1>
+                    <p>Quem te deve, o que foi, em quantas vezes e quais parcelas já foram pagas.</p>
+                </div>
+                <div class="ca-card">
+                    <p class="ca-card-title" id="p-form-title">Nova promissória</p>
+                    <div class="fm-grid">
+                        <div class="fm-field"><label>Pessoa que deve</label><input type="text" id="p-pessoa" list="p-pessoas-list" placeholder="Nome"><datalist id="p-pessoas-list"></datalist></div>
+                        <div class="fm-field wide"><label>O que foi</label><input type="text" id="p-desc" placeholder="Ex.: Sapato, empréstimo, celular"></div>
+                        <div class="fm-field"><label>Onde foi feita</label><select id="p-origem"></select></div>
+                        <div class="fm-field"><label>Data da compra / empréstimo</label><input type="date" id="p-data" onchange="suggestFirstDue()"></div>
+                        <div class="fm-field"><label>Nº de parcelas</label><input type="number" id="p-n" min="1" max="120" step="1" value="1"></div>
+                        <div class="fm-field"><label>Valor de cada parcela (R$)</label><input type="number" id="p-valor" step="0.01" min="0" placeholder="0,00"></div>
+                        <div class="fm-field"><label>1º vencimento</label><input type="date" id="p-venc"></div>
+                    </div>
+                    <div class="fm-actions">
+                        <button class="fm-btn" id="p-save-btn" onclick="savePromissoria()">➕ Adicionar promissória</button>
+                        <button class="fm-btn sec" id="p-cancel-btn" style="display:none" onclick="cancelEditPromissoria()">Cancelar edição</button>
+                        <span class="fm-hint" id="p-hint"></span>
+                    </div>
+                </div>
+                <div id="p-content"></div>
+            </div>
+        </div>
+        </div><!-- /app-body -->
+    </div>
+    
+    <script>
+        let transactions = [];
+        // ===================== PESSOAS (salvas no navegador) =====================
+        const PEOPLE_KEY = 'analiseNubank.pessoas.v1';
+        let titular = '';
+        let people = []; // demais pessoas (sem a titular)
+
+        function loadPeople() {
+            try {
+                const d = JSON.parse(localStorage.getItem(PEOPLE_KEY) || 'null');
+                if (d) {
+                    titular = d.titular || '';
+                    people = Array.isArray(d.people) ? d.people.filter(p => p && p !== titular) : [];
+                }
+            } catch (e) { console.warn('Não foi possível ler os nomes salvos', e); }
+        }
+        function savePeople() { persist(); }
+        function nameExists(name, except) {
+            const n = name.toLowerCase();
+            return getAllPeople().some(p => p !== except && p.toLowerCase() === n);
+        }
+
+        function renderPeoplePanel() {
+            const body = document.getElementById('people-panel-body');
+            if (!titular) {
+                body.innerHTML = `
+                    <div class="pp-first">
+                        <p>👋 Para começar, informe o nome da <strong>titular do cartão</strong>. Ao importar uma fatura, todas as transações entram no nome dela, e depois você divide.</p>
+                        <div class="pp-add">
+                            <input type="text" id="titular-input" placeholder="Nome da titular" onkeydown="if(event.key==='Enter') setTitular()">
+                            <button onclick="setTitular()">Salvar</button>
+                        </div>
+                    </div>`;
+                return;
+            }
+            const chip = (p, isTit) => `
+                <div class="pp-chip">
+                    <span class="pp-dot" style="background:${personColor(p)}"></span>
+                    <span>${esc(p)}</span>
+                    ${isTit ? '<span class="pp-badge">TITULAR</span>' : ''}
+                    <button class="pp-icon" title="Renomear" data-p="${esc(p)}" onclick="renamePerson(this.dataset.p)">✎</button>
+                    ${isTit ? '' : `<button class="pp-icon del" title="Remover" data-p="${esc(p)}" onclick="removePerson(this.dataset.p)">✕</button>`}
+                </div>`;
+            body.innerHTML = `
+                <div class="pp-list">${chip(titular, true)}${people.map(p => chip(p, false)).join('')}</div>
+                <div class="pp-add">
+                    <input type="text" id="pp-new-input" placeholder="Nome da nova pessoa" onkeydown="if(event.key==='Enter') addPersonFromPanel()">
+                    <button onclick="addPersonFromPanel()">➕ Adicionar</button>
+                </div>`;
+        }
+
+        function setTitular() {
+            const name = (document.getElementById('titular-input').value || '').trim();
+            if (!name) { alert('Digite o nome da titular.'); return; }
+            titular = name;
+            people = people.filter(p => p !== name);
+            savePeople();
+            renderPeoplePanel();
+        }
+
+        function addPerson(name) {
+            name = (name || '').trim();
+            if (!name) { alert('Digite um nome!'); return false; }
+            if (nameExists(name)) { alert('Essa pessoa já existe!'); return false; }
+            people.push(name);
+            savePeople();
+            renderPeoplePanel();
+            if (transactions.length) renderList();
+            return true;
+        }
+        function addPersonFromPanel() {
+            const input = document.getElementById('pp-new-input');
+            if (addPerson(input.value)) document.getElementById('pp-new-input').focus();
+        }
+
+        function renamePerson(oldName) {
+            const name = (prompt('Novo nome para ' + oldName + ':', oldName) || '').trim();
+            if (!name || name === oldName) return;
+            if (nameExists(name, oldName)) { alert('Já existe uma pessoa com esse nome.'); return; }
+            if (titular === oldName) titular = name;
+            people = people.map(p => p === oldName ? name : p);
+            transactions.forEach(tx => tx.splits.forEach(sp => { if (sp.owner === oldName) sp.owner = name; }));
+            splitDraft.forEach(r => { if (r.owner === oldName) r.owner = name; });
+            if (caPerson === oldName) caPerson = name;
+            savePeople();
+            renderPeoplePanel();
+            if (transactions.length) renderList();
+        }
+
+        function removePerson(name) {
+            if (name === titular) return;
+            const uses = transactions.filter(tx => tx.splits.some(sp => sp.owner === name)).length;
+            const msg = uses
+                ? `${name} aparece em ${uses} transaç${uses === 1 ? 'ão' : 'ões'} desta fatura. A parte dela volta para ${titular}. Remover mesmo assim?`
+                : `Remover ${name} da lista de pessoas?`;
+            if (!confirm(msg)) return;
+            transactions.forEach(tx => {
+                const idx = tx.splits.findIndex(sp => sp.owner === name);
+                if (idx === -1) return;
+                const val = tx.splits[idx].value;
+                const tit = tx.splits.find(sp => sp.owner === titular);
+                if (tit) { tit.value = Math.round((tit.value + val) * 100) / 100; tx.splits.splice(idx, 1); }
+                else tx.splits[idx].owner = titular;
+            });
+            people = people.filter(p => p !== name);
+            if (caPerson === name) caPerson = '__todas';
+            expandedId = null;
+            savePeople();
+            renderPeoplePanel();
+            if (transactions.length) renderList();
+        }
+        let expandedId = null;
+        let activeTab = 'transacoes';
+        let caPerson = '__todas';
+        let caChart = null;
+
+        // Categorias com as cores do relatório mensal
+        let categories = [
+            { name: 'Compras online', color: '#378ADD' },
+            { name: 'Transporte', color: '#185FA5' },
+            { name: 'Eletrodomésticos', color: '#D4537E' },
+            { name: 'Construção', color: '#5DCAA5' },
+            { name: 'Vestuário', color: '#E24B4A' },
+            { name: 'Serviços digitais', color: '#BA7517' },
+            { name: 'Lazer', color: '#EF9F27' },
+            { name: 'Saúde', color: '#1D9E75' },
+            { name: 'Beleza', color: '#7F77DD' },
+            { name: 'Alimentação', color: '#639922' },
+            { name: 'Tarifas e encargos', color: '#5F5E5A' },
+            { name: 'Outros', color: '#888780' }
+        ];
+        const extraColors = ['#0F6E56', '#993C1D', '#3C3489', '#854F0B', '#72243E', '#27500A', '#0C447C', '#5F5E5A'];
+        const personPalette = ['#F57C00', '#D32F2F', '#388E3C', '#7B1FA2', '#0097A7', '#C2185B', '#5D4037', '#455A64', '#AFB42B'];
+
+        function catColor(name) {
+            const c = categories.find(c => c.name === name);
+            return c ? c.color : '#888780';
+        }
+        function personColor(name) {
+            if (name === titular) return '#1976D2';
+            const i = people.indexOf(name);
+            return i >= 0 ? personPalette[i % personPalette.length] : '#7B1FA2';
+        }
+        function fmt(v) { return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function fmtNum(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function fmtPct(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%'; }
+        function esc(s) { return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+
+        function detectCategory(title) {
+            const t = title.toLowerCase();
+            const has = (...words) => words.some(w => t.includes(w));
+            if (/\b(iof|juros|multa|anuidade|encargo|tarifa)\b/.test(t)) return 'Tarifas e encargos';
+            if (has('uber', '99app', 'combust', 'posto ', 'estaciona')) return 'Transporte';
+            if (has('cine', 'ingresso', 'teatro', 'show ')) return 'Lazer';
+            if (has('netflix', 'spotify', 'apple', 'dm *spotify', 'claro', 'vivo') || /\btim\b/.test(t)) return 'Serviços digitais';
+            if (has('cosmetic', 'cosmétic', 'beleza', 'salao', 'salão', 'barbearia', 'perfum')) return 'Beleza';
+            if (has('eletro', 'magazine', 'casas bahia', 'casas b ', 'ponto frio')) return 'Eletrodomésticos';
+            if (has('farmacia', 'farmácia', 'pague menos', 'drogaria', 'consultorio', 'consultório', 'clinica', 'clínica', 'verz', 'óptica', 'otica')) return 'Saúde';
+            if (has('ifood', 'ifd*', 'restaurante', 'lanche', 'espetinho', 'pizza', 'atacadao', 'atacado', 'supermercado', 'suprmercado', 'suprme', 'mateus', 'panificadora', 'padaria', 'pao ', 'pão ', 'bakery', 'cookies', 'comércio')) return 'Alimentação';
+            if (has('moda', 'vestuário', 'mk sobral', 'calcad', 'calçad', 'sapataria', 'confe', 'roupa')) return 'Vestuário';
+            if (has('amazon', 'mercado livre', 'mercadolivre', 'shein', 'shopee', 'compra', 'lojas')) return 'Compras online';
+            if (has('construção', 'selma', 'encantos')) return 'Construção';
+            return 'Outros';
+        }
+
+        function categoryOptions(selected) {
+            return categories.map(c => `<option value="${esc(c.name)}" ${c.name === selected ? 'selected' : ''}>${esc(c.name)}</option>`).join('')
+                + `<option value="__nova">➕ Nova categoria...</option>`;
+        }
+
+        function changeCategory(id, value, selectEl) {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx) return;
+            if (value === '__nova') {
+                const name = (prompt('Nome da nova categoria:') || '').trim();
+                if (!name) { selectEl.value = tx.category; return; }
+                if (!categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+                    categories.splice(categories.length - 1, 0, { name, color: extraColors[(categories.length) % extraColors.length] });
+                    saveData();
+                }
+                value = categories.find(c => c.name.toLowerCase() === name.toLowerCase()).name;
+            }
+            tx.category = value;
+            renderList();
+        }
+
+        function renderCategoryFilter() {
+            const sel = document.getElementById('filter-category');
+            const current = sel.value;
+            sel.innerHTML = '<option value="">Categoria</option>' +
+                categories.map(c => `<option value="${esc(c.name)}" ${c.name === current ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+        }
+
+        const TABS = ['transacoes', 'categorias', 'gastos', 'promissorias'];
+        function switchTab(tab) {
+            activeTab = tab;
+            TABS.forEach(t => {
+                document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+                document.getElementById('tabbtn-' + t).classList.toggle('active', t === tab);
+            });
+            if (tab === 'categorias') renderCategoryTab();
+            if (tab === 'gastos') renderGastosTab();
+            if (tab === 'promissorias') renderPromissoriasTab();
+        }
+        
+        // ===================== IMPORTAÇÃO (CSV e PDF) =====================
+        async function importFile() {
+            const file = document.getElementById('csv-input').files[0];
+            if (!titular) {
+                showStatus('Informe o nome da titular no painel 👥 Pessoas antes de importar.', 'error');
+                return;
+            }
+            if (!file) { showStatus('Selecione um arquivo!', 'error'); return; }
+            const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+            const btn = document.getElementById('import-btn');
+            btn.disabled = true;
+            try {
+                let parsed;
+                if (isPdf) {
+                    showStatus('⏳ Lendo o PDF da fatura...', 'info');
+                    parsed = await parsePdfFile(file);
+                } else {
+                    const fm = file.name.match(/(\d{4})-(\d{2})-\d{2}/);
+                    parsed = { rows: parseCsvText(await file.text()), banco: 'Nubank', venc: fm ? `${fm[1]}-${fm[2]}` : null };
+                }
+                loadTransactions(parsed, isPdf ? 'PDF' : 'CSV');
+            } catch (err) {
+                console.error(err);
+                const msg = /password/i.test(err && err.name + err.message)
+                    ? 'Este PDF está protegido por senha. Gere a fatura sem senha no app do Nubank e tente de novo.'
+                    : 'Erro ao processar arquivo: ' + (err.message || err);
+                showStatus('❌ ' + msg, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+        // compatibilidade com o nome antigo
+        function importCSV() { importFile(); }
+
+        // ===================== FATURAS (histórico por mês, sem duplicar) =====================
+        let faturas = [];
+        let currentFaturaId = null;
+        const MES_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+        function faturaLabel(f) {
+            const [y, m] = f.venc.split('-').map(Number);
+            return `Venc. ${MES_ABREV[m - 1]}/${y} · ${f.banco}`;
+        }
+        function normTitle(t) { return t.toLowerCase().replace(/\s+/g, ' ').trim(); }
+
+        function askVencimento(rows) {
+            const last = rows.map(r => r.date).sort().pop() || todayISO();
+            const guess = addMonthsISO(last.slice(0, 7) + '-01', 1);
+            const ans = (prompt('Não encontrei o mês de vencimento no arquivo. Informe o mês de vencimento da fatura (MM/AAAA):',
+                `${guess.slice(5, 7)}/${guess.slice(0, 4)}`) || '').trim();
+            const m = ans.match(/^(\d{1,2})\/(\d{4})$/);
+            if (!m || +m[1] < 1 || +m[1] > 12) return null;
+            return `${m[2]}-${String(+m[1]).padStart(2, '0')}`;
+        }
+
+        function loadTransactions(parsed, origem) {
+            const rows = parsed.rows || [];
+            const valid = rows.filter(r => !/pagamento recebido|^pagamento em\b|^pagamento\s*$|^pgto\b/i.test(r.title));
+            if (valid.length === 0) {
+                showStatus(origem === 'PDF'
+                    ? '❌ Nenhuma transação encontrada no PDF. Confira se é o PDF da fatura (com a lista de lançamentos).'
+                    : '❌ Nenhuma transação encontrada! Verifique se o arquivo está no formato correto (date, title, amount).', 'error');
+                return;
+            }
+            const venc = parsed.venc || askVencimento(valid);
+            if (!venc) { showStatus('❌ Importação cancelada: mês de vencimento não informado.', 'error'); return; }
+            const banco = parsed.banco || 'Cartão';
+            const id = `${banco.replace(/\s+/g, '')}-${venc}`;
+
+            // chave de cada lançamento: data + descrição + valor (+ ordem, para compras iguais no mesmo dia)
+            const occ = {};
+            const incoming = valid.map(r => {
+                const base = `${r.date}|${normTitle(r.title)}|${r.value.toFixed(2)}`;
+                occ[base] = (occ[base] || 0) + 1;
+                return { ...r, key: `${base}#${occ[base]}` };
+            });
+            const newTx = r => ({
+                key: r.key, date: r.date, title: r.title, value: r.value,
+                category: r.category && categories.some(c => c.name === r.category) ? r.category : detectCategory(r.title),
+                splits: [{ owner: titular, value: r.value }]
+            });
+
+            let f = faturas.find(x => x.id === id);
+            let novas = 0, mantidas = 0, removidas = 0;
+            if (!f) {
+                f = { id, banco, venc, importadoEm: new Date().toISOString(), transactions: incoming.map(newTx) };
+                faturas.push(f);
+                novas = incoming.length;
+            } else {
+                const old = new Map(f.transactions.map(t => [t.key, t]));
+                const incomingKeys = new Set(incoming.map(r => r.key));
+                const merged = incoming.map(r => {
+                    if (old.has(r.key)) { mantidas++; return old.get(r.key); }
+                    novas++; return newTx(r);
+                });
+                const gone = f.transactions.filter(t => !incomingKeys.has(t.key));
+                if (gone.length) {
+                    const lista = gone.slice(0, 5).map(t => `• ${t.title} (${fmt(t.value)})`).join('\n');
+                    if (confirm(`${gone.length} lançamento(s) salvos não estão neste arquivo:\n${lista}${gone.length > 5 ? '\n...' : ''}\n\nRemover da fatura? (Cancelar mantém)`)) removidas = gone.length;
+                    else merged.push(...gone);
+                }
+                f.transactions = merged;
+                f.importadoEm = new Date().toISOString();
+            }
+            caPerson = '__todas';
+            selectFatura(id);
+            const total = f.transactions.reduce((a, t) => a + t.value, 0);
+            const detalhe = mantidas || removidas
+                ? `${novas} novo(s), ${mantidas} já existiam (divisões mantidas)${removidas ? `, ${removidas} removido(s)` : ''}`
+                : `${novas} lançamentos importados`;
+            showStatus(`✅ ${faturaLabel(f)}: ${detalhe}. Total ${fmt(total)}, confira se bate com a fatura.`, 'success');
+        }
+
+        function selectFatura(id) {
+            const f = faturas.find(x => x.id === id) || null;
+            currentFaturaId = f ? f.id : null;
+            transactions = f ? f.transactions : [];
+            transactions.forEach((t, i) => { t.id = i; });
+            expandedId = null;
+            document.getElementById('empty-state').style.display = f ? 'none' : 'block';
+            document.getElementById('fatura-content').style.display = f ? 'block' : 'none';
+            renderFaturaBar();
+            if (f) renderList(); else persist();
+            if (activeTab === 'categorias') renderCategoryTab();
+        }
+        function selectLatestFatura() {
+            const latest = faturas.slice().sort((a, b) => b.venc.localeCompare(a.venc))[0];
+            selectFatura(latest ? latest.id : null);
+        }
+        function renderFaturaBar() {
+            const bar = document.getElementById('fatura-bar');
+            if (!faturas.length) { bar.style.display = 'none'; return; }
+            const ord = faturas.slice().sort((a, b) => b.venc.localeCompare(a.venc));
+            bar.style.display = 'flex';
+            bar.innerHTML = `
+                <strong>🧾 Fatura:</strong>
+                <select onchange="selectFatura(this.value)">
+                    ${ord.map(f => `<option value="${esc(f.id)}" ${f.id === currentFaturaId ? 'selected' : ''}>${esc(faturaLabel(f))} · ${f.transactions.length} lanç. · ${fmt(f.transactions.reduce((a, t) => a + t.value, 0))}</option>`).join('')}
+                </select>
+                <button onclick="deleteFatura()">🗑 Excluir esta fatura</button>`;
+        }
+        function deleteFatura() {
+            const f = faturas.find(x => x.id === currentFaturaId);
+            if (!f || !confirm(`Excluir a fatura ${faturaLabel(f)} e todas as divisões feitas nela?`)) return;
+            faturas = faturas.filter(x => x.id !== f.id);
+            selectLatestFatura();
+            persist();
+        }
+
+        function parseCsvText(csv) {
+            const lines = csv.split(/\r?\n/).filter(line => line.trim());
+            const rows = [];
+            let startIdx = 0;
+            if (lines.length && (lines[0].toLowerCase().includes('date') || lines[0].toLowerCase().includes('data'))) startIdx = 1;
+            for (let i = startIdx; i < lines.length; i++) {
+                const line = lines[i];
+                const parts = [];
+                let current = '', insideQuotes = false;
+                for (let j = 0; j < line.length; j++) {
+                    const ch = line[j];
+                    if (ch === '"') insideQuotes = !insideQuotes;
+                    else if (ch === ',' && !insideQuotes) { parts.push(current.trim()); current = ''; }
+                    else current += ch;
+                }
+                parts.push(current.trim());
+                if (parts.length < 3) continue;
+                const date = parts[0].trim();
+                const title = parts[1].trim().replace(/^"|"$/g, '');
+                const valueStr = parts[2].trim().replace(/^"|"$/g, '').replace('- ', '-');
+                const value = parseFloat(valueStr.replace('.', '').replace(',', '.'));
+                if (isNaN(value)) continue;
+                rows.push({ date, title, value });
+            }
+            return rows;
+        }
+
+        // ---------- PDF ----------
+        const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        const PDFJS_WORKER_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        let pdfjsReady = null;
+
+        function loadPdfJs() {
+            if (pdfjsReady) return pdfjsReady;
+            pdfjsReady = new Promise((resolve, reject) => {
+                if (window.pdfjsLib) return resolve(window.pdfjsLib);
+                const sc = document.createElement('script');
+                sc.src = PDFJS_URL;
+                sc.onload = async () => {
+                    const lib = window.pdfjsLib;
+                    try {
+                        // carrega o worker como blob para funcionar também com o arquivo aberto direto do computador
+                        const code = await (await fetch(PDFJS_WORKER_URL)).text();
+                        lib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+                    } catch (e) {
+                        lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+                    }
+                    resolve(lib);
+                };
+                sc.onerror = () => { pdfjsReady = null; reject(new Error('não foi possível carregar o leitor de PDF (verifique a internet).')); };
+                document.head.appendChild(sc);
+            });
+            return pdfjsReady;
+        }
+
+        // Remonta as linhas do PDF agrupando os pedaços de texto pela altura (y)
+        async function extractPdfLines(file) {
+            const lib = await loadPdfJs();
+            const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+            const lines = [];
+            for (let p = 1; p <= pdf.numPages; p++) {
+                const page = await pdf.getPage(p);
+                const content = await page.getTextContent();
+                const items = content.items
+                    .filter(it => it.str && it.str.trim())
+                    .map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }));
+                items.sort((a, b) => b.y - a.y || a.x - b.x);
+                const rowsY = [];
+                items.forEach(it => {
+                    let row = rowsY.find(r => Math.abs(r.y - it.y) <= 3);
+                    if (!row) { row = { y: it.y, items: [] }; rowsY.push(row); }
+                    row.items.push(it);
+                });
+                rowsY.sort((a, b) => b.y - a.y);
+                rowsY.forEach(r => {
+                    r.items.sort((a, b) => a.x - b.x);
+                    lines.push(r.items.map(i => i.str.trim()).join(' ').replace(/\s+/g, ' ').trim());
+                });
+            }
+            return lines;
+        }
+
+        const MESES = { JAN: 1, FEV: 2, MAR: 3, ABR: 4, MAI: 5, JUN: 6, JUL: 7, AGO: 8, SET: 9, OUT: 10, NOV: 11, DEZ: 12 };
+
+        function parseBRL(str) {
+            return parseFloat(str.replace(/\./g, '').replace(',', '.'));
+        }
+
+        // Descobre mês/ano de vencimento para completar o ano das transações (o PDF mostra só "05 JUL")
+        function detectReference(text) {
+            let m = text.match(/fechad[ao]\s+em\s+(\d{2})\/(\d{2})\/(\d{4})/i);
+            if (m) return { month: +m[2], year: +m[3] };
+            m = text.match(/vencimento[\s\S]{0,60}?(\d{2})\/(\d{2})\/(\d{4})/i);
+            if (m) return { month: +m[2], year: +m[3] };
+            m = text.match(/vencimento[^\n]{0,40}?(\d{1,2})\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[A-Z]*\.?\s+(?:DE\s+)?(\d{4})/i);
+            if (m) return { month: MESES[m[2].toUpperCase()], year: +m[3] };
+            m = text.match(/vencimento[^\n]{0,40}?(\d{2})\/(\d{2})\/(\d{4})/i);
+            if (m) return { month: +m[2], year: +m[3] };
+            m = text.match(/(\d{1,2})\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[A-Z]*\.?\s+(?:DE\s+)?(20\d{2})/i);
+            if (m) return { month: MESES[m[2].toUpperCase()], year: +m[3] };
+            const now = new Date();
+            return { month: now.getMonth() + 1, year: now.getFullYear() };
+        }
+
+        // Categorias que o BB imprime na fatura -> categorias do app
+        const BB_SECTIONS = {
+            'lazer': 'Lazer', 'restaurantes': 'Alimentação', 'supermercados': 'Alimentação', 'alimentação': 'Alimentação',
+            'saúde': 'Saúde', 'farmácias': 'Saúde', 'farmácia': 'Saúde', 'vestuário': 'Vestuário',
+            'transporte': 'Transporte', 'combustível': 'Transporte', 'eletrônicos': 'Eletrodomésticos',
+            'outros lançamentos': null, 'serviços': null, 'compras parceladas': null, 'pagamentos/créditos': null
+        };
+
+        // Formato BB/Ourocard: "16/09 CINE SOBRAL SOBRAL BR R$ 20,00" com cabeçalhos de categoria entre as linhas
+        function parseBancoBrasil(lines, ref) {
+            const rows = [];
+            const re = /^(\d{2})\/(\d{2})\s+(.+?)\s+(?:[A-Z]{2}\s+)?R\$\s*([-−–]?)\s*(\d{1,3}(?:\.\d{3})*,\d{2})$/;
+            let section = '';
+            lines.forEach(line => {
+                const m = line.match(re);
+                if (!m) {
+                    if (!/\d/.test(line) && !/R\$/.test(line) && line.length <= 40) section = line.trim().toLowerCase();
+                    return;
+                }
+                const day = +m[1], month = +m[2];
+                if (month < 1 || month > 12 || day < 1 || day > 31) return;
+                const title = m[3].replace(/\s+/g, ' ').trim();
+                let value = parseBRL(m[5]);
+                if (isNaN(value)) return;
+                if (m[4]) value = -value;
+                const year = month > ref.month ? ref.year - 1 : ref.year;
+                const mapped = BB_SECTIONS[section];
+                rows.push({
+                    date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+                    title, value,
+                    category: mapped || detectCategory(title)
+                });
+            });
+            return rows;
+        }
+
+        async function parsePdfFile(file) {
+            const lines = await extractPdfLines(file);
+            const ref = detectReference(lines.join('\n'));
+            const bbRows = parseBancoBrasil(lines, ref);
+            const rows = [];
+            // Ex.: "05 JUL •••• 1234 Uber *Trip R$ 12,50" | "05 JUL Mercado Livre - Parcela 4/10 89,90" | "06 JUL Estorno −R$ 20,00"
+            const re = /^(\d{1,2})\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\b\.?\s+(.+?)\s+([-−–]?)\s*(?:R\$|BRL)?\s*([-−–]?)\s*(\d{1,3}(?:\.\d{3})*,\d{2})$/i;
+            lines.forEach(line => {
+                const m = line.match(re);
+                if (!m) return;
+                const day = +m[1];
+                const month = MESES[m[2].toUpperCase()];
+                let title = m[3]
+                    .replace(/[•·*●]{2,}\s*\d{4}\s*/g, '')     // máscara do cartão (•••• 1234)
+                    .replace(/\s+(?:R\$|BRL)\s*$/i, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (!title || /^(total|saldo|subtotal)\b/i.test(title)) return;
+                const negative = !!(m[4] || m[5]);
+                let value = parseBRL(m[6]);
+                if (isNaN(value)) return;
+                if (negative) value = -value;
+                const year = month > ref.month ? ref.year - 1 : ref.year;
+                const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                rows.push({ date, title, value });
+            });
+            const venc = detectVencimento(lines.join('\n'));
+            return bbRows.length > rows.length
+                ? { rows: bbRows, banco: 'Banco do Brasil', venc }
+                : { rows, banco: 'Nubank', venc };
+        }
+
+        function detectVencimento(text) {
+            let m = text.match(/vencimento[\s\S]{0,60}?(\d{2})\/(\d{2})\/(\d{4})/i);
+            if (m) return `${m[3]}-${m[2]}`;
+            m = text.match(/vencimento[\s\S]{0,40}?(\d{1,2})\s+(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)[A-Z]*\.?\s+(?:DE\s+)?(\d{4})/i);
+            if (m) return `${m[3]}-${String(MESES[m[2].toUpperCase()]).padStart(2, '0')}`;
+            return null;
+        }
+        
+        function showStatus(message, type) {
+            const el = document.getElementById('import-status');
+            el.textContent = message;
+            el.className = 'import-status status-' + type;
+        }
+        
+        function getAllPeople() {
+            const list = [];
+            if (titular) list.push(titular);
+            people.forEach(p => { if (!list.includes(p)) list.push(p); });
+            transactions.forEach(tx => tx.splits.forEach(s => { if (!list.includes(s.owner)) list.push(s.owner); }));
+            return list;
+        }
+        
+        function renderList() {
+            const searchVal = document.getElementById('search').value.toLowerCase();
+            const catFilter = document.getElementById('filter-category').value;
+            
+            const filtered = transactions.filter(tx => 
+                (searchVal === '' || tx.title.toLowerCase().includes(searchVal)) &&
+                (catFilter === '' || tx.category === catFilter)
+            );
+            
+            let html = '';
+            filtered.forEach(tx => {
+                const totalValue = tx.value;
+                const isExpanded = expandedId === tx.id;
+                
+                html += `
+                    <div class="tx-item ${isExpanded ? 'expanded' : ''}" onclick="toggleExpand(${tx.id})">
+                        <div class="tx-date">${tx.date}</div>
+                        <div class="tx-desc">
+                            <div class="tx-desc-title">${tx.title}</div>
+                            <div onclick="event.stopPropagation();">
+                                <select class="tx-cat-select" title="Alterar categoria" style="border-left: 3px solid ${catColor(tx.category)}" onchange="changeCategory(${tx.id}, this.value, this)">
+                                    ${categoryOptions(tx.category)}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="tx-value">R$ ${totalValue.toFixed(2)}</div>
+                        <div class="tx-owner" onclick="event.stopPropagation();">
+                            <select onchange="changeSingleOwner(${tx.id}, this.value)" ${tx.splits.length > 1 ? 'title="Transação dividida. Escolha um nome para atribuir o valor inteiro a uma pessoa só."' : ''}>
+                                ${tx.splits.length > 1 ? `<option value="__dividida" selected>${tx.splits.map(s => s.owner).join(' + ')}</option>` : ''}
+                                ${getAllPeople().map(p => `<option value="${p}" ${tx.splits.length === 1 && tx.splits[0].owner === p ? 'selected' : ''}>${p}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                `;
+                
+                if (isExpanded) {
+                    html += `
+                        <div class="tx-expanded" onclick="event.stopPropagation();">
+                            <div class="split-section">
+                                <h4>Divisão atual</h4>
+                                ${tx.splits.length > 0 ? `
+                                    <div class="split-display">
+                                        ${tx.splits.map((split, idx) => `
+                                            <div class="split-tag">
+                                                <strong>${split.owner}:</strong> R$ ${split.value.toFixed(2)}
+                                                ${tx.splits.length > 1 ? `<span class="split-remove" onclick="removeSplit(${tx.id}, ${idx})">✕</span>` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : '<p style="color: #999;">Nenhuma divisão</p>'}
+                            </div>
+                            
+                            <div class="split-section">
+                                <h4>Dividir entre pessoas</h4>
+                                <div id="split-rows-${tx.id}"></div>
+                                <div class="split-tools">
+                                    <button class="btn-link" onclick="addSplitRow(${tx.id})">➕ Adicionar pessoa</button>
+                                    <button class="btn-link" onclick="splitEqually(${tx.id})">⚖️ Dividir igualmente</button>
+                                </div>
+                                <p class="split-remaining" id="split-remaining-${tx.id}"></p>
+                                <div class="split-buttons">
+                                    <button class="btn btn-add" onclick="saveSplit(${tx.id})">Salvar divisão</button>
+                                    <button class="btn btn-close" onclick="toggleExpand(-1)">Fechar</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    setTimeout(() => renderSplitRows(tx.id), 0);
+                }
+            });
+            
+            document.getElementById('tx-list').innerHTML = html;
+            renderCategoryFilter();
+            updateMetrics();
+            if (activeTab === 'categorias') renderCategoryTab();
+            renderFaturaBar();
+            persist();
+        }
+        
+        let splitDraft = [];
+
+        function toggleExpand(id) {
+            expandedId = expandedId === id ? null : id;
+            const tx = transactions.find(t => t.id === expandedId);
+            if (tx) {
+                if (tx.splits.length > 1) {
+                    splitDraft = tx.splits.map(s => ({ owner: s.owner, value: s.value }));
+                } else {
+                    const first = tx.splits[0].owner;
+                    const second = getAllPeople().find(p => p !== first) || first;
+                    splitDraft = [{ owner: first, value: 0 }, { owner: second, value: 0 }];
+                    equalValues(tx.value, splitDraft);
+                }
+            }
+            renderList();
+        }
+
+        function equalValues(total, rows) {
+            const n = rows.length;
+            const cents = Math.round(total * 100);
+            const base = Math.trunc(cents / n);
+            let rest = cents - base * n;
+            rows.forEach(r => {
+                let c = base;
+                if (rest > 0) { c++; rest--; } else if (rest < 0) { c--; rest++; }
+                r.value = c / 100;
+            });
+        }
+
+        function renderSplitRows(id) {
+            const box = document.getElementById(`split-rows-${id}`);
+            if (!box) return;
+            const allP = getAllPeople();
+            box.innerHTML = splitDraft.map((r, i) => `
+                <div class="split-row">
+                    <div>
+                        <label>Pessoa ${i + 1}</label>
+                        <select onchange="splitDraft[${i}].owner = this.value; updateSplitRemaining(${id});">
+                            ${allP.map(p => `<option value="${p}" ${p === r.owner ? 'selected' : ''}>${p}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label>Valor ${i + 1}</label>
+                        <input type="number" step="0.01" value="${r.value.toFixed(2)}" oninput="splitDraft[${i}].value = parseFloat(this.value) || 0; updateSplitRemaining(${id});">
+                    </div>
+                    <button class="split-row-remove" title="Remover pessoa" ${splitDraft.length <= 2 ? 'disabled' : ''} onclick="removeSplitRow(${id}, ${i})">✕</button>
+                </div>`).join('');
+            updateSplitRemaining(id);
+        }
+
+        function updateSplitRemaining(id) {
+            const tx = transactions.find(t => t.id === id);
+            const el = document.getElementById(`split-remaining-${id}`);
+            if (!tx || !el) return;
+            const sum = splitDraft.reduce((a, r) => a + r.value, 0);
+            const diff = Math.round((tx.value - sum) * 100) / 100;
+            if (diff === 0) {
+                el.className = 'split-remaining ok';
+                el.textContent = `✓ Valores fecham com o total de R$ ${tx.value.toFixed(2)}`;
+            } else {
+                el.className = 'split-remaining err';
+                el.textContent = diff > 0
+                    ? `Faltam R$ ${diff.toFixed(2)} para fechar o total de R$ ${tx.value.toFixed(2)}`
+                    : `Passou R$ ${Math.abs(diff).toFixed(2)} do total de R$ ${tx.value.toFixed(2)}`;
+            }
+        }
+
+        function addSplitRow(id) {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx) return;
+            const used = splitDraft.map(r => r.owner);
+            const next = getAllPeople().find(p => !used.includes(p)) || getAllPeople()[0];
+            const sum = splitDraft.reduce((a, r) => a + r.value, 0);
+            splitDraft.push({ owner: next, value: Math.max(0, Math.round((tx.value - sum) * 100) / 100) });
+            renderSplitRows(id);
+        }
+
+        function removeSplitRow(id, idx) {
+            if (splitDraft.length <= 2) return;
+            splitDraft.splice(idx, 1);
+            renderSplitRows(id);
+        }
+
+        function splitEqually(id) {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx) return;
+            equalValues(tx.value, splitDraft);
+            renderSplitRows(id);
+        }
+        
+        function changeSingleOwner(id, owner) {
+            if (owner === '__dividida') return;
+            const tx = transactions.find(t => t.id === id);
+            if (tx) {
+                tx.splits = [{ owner: owner, value: tx.value }];
+                renderList();
+            }
+        }
+        
+        function removeSplit(id, splitIdx) {
+            const tx = transactions.find(t => t.id === id);
+            if (tx && tx.splits.length > 1) {
+                tx.splits.splice(splitIdx, 1);
+                if (tx.splits.length > 1) splitDraft = tx.splits.map(s => ({ owner: s.owner, value: s.value }));
+                renderList();
+            }
+        }
+        
+        function saveSplit(id) {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx) return;
+            const owners = splitDraft.map(r => r.owner);
+            if (new Set(owners).size !== owners.length) {
+                alert('Cada pessoa só pode aparecer uma vez na divisão.');
+                return;
+            }
+            if (splitDraft.some(r => tx.value >= 0 ? r.value < 0 : r.value > 0)) {
+                alert('Os valores não podem ter sinal diferente do valor da transação.');
+                return;
+            }
+            const sum = splitDraft.reduce((a, r) => a + r.value, 0);
+            if (Math.round((tx.value - sum) * 100) !== 0) {
+                alert(`A soma das partes (R$ ${sum.toFixed(2)}) precisa ser igual ao valor da transação (R$ ${tx.value.toFixed(2)}).`);
+                return;
+            }
+            tx.splits = splitDraft.filter(r => r.value !== 0).map(r => ({ owner: r.owner, value: r.value }));
+            if (tx.splits.length === 0) tx.splits = [{ owner: owners[0], value: tx.value }];
+            renderList();
+        }
+        
+        function addNewPerson() {
+            const input = document.getElementById('new-person-name');
+            if (addPerson(input.value)) input.value = '';
+        }
+        
+        function updateMetrics() {
+            if (transactions.length === 0) return;
+            
+            const totals = {};
+            const counts = {};
+            
+            getAllPeople().forEach(p => {
+                totals[p] = 0;
+                counts[p] = 0;
+            });
+            
+            transactions.forEach(tx => {
+                tx.splits.forEach(split => {
+                    if (!totals[split.owner]) totals[split.owner] = 0;
+                    if (!counts[split.owner]) counts[split.owner] = 0;
+                    totals[split.owner] += split.value;
+                    counts[split.owner]++;
+                });
+            });
+            
+            const metricsHtml = getAllPeople().slice(0, 5).map(p => `
+                <div class="metric">
+                    <div class="metric-label">${p}</div>
+                    <div class="metric-value">${totals[p] ? `R$ ${totals[p].toFixed(2)}` : 'R$ 0,00'}</div>
+                </div>
+            `).join('') + `
+                <div class="metric">
+                    <div class="metric-label">Total Geral</div>
+                    <div class="metric-value" style="color: #A32D2D;">R$ ${Object.values(totals).reduce((a, b) => a + b, 0).toFixed(2)}</div>
+                </div>
+            `;
+            document.getElementById('metrics-container').innerHTML = metricsHtml;
+            
+            const peopleHtml = getAllPeople().map(p => {
+                const c = personColor(p);
+                return `
+                    <div class="person-card">
+                        <div class="person-header" style="color:${c};border-bottom-color:${c}">👤 ${esc(p)}${p === titular ? ' (titular)' : ''}</div>
+                        <div class="person-value">${totals[p] ? `R$ ${totals[p].toFixed(2)}` : 'R$ 0,00'}</div>
+                        <div class="person-count">${counts[p]} transações</div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('people-container').innerHTML = peopleHtml;
+            
+            const geral = Object.values(totals).reduce((a, b) => a + b, 0);
+            const summaryHtml = getAllPeople().map(p => {
+                const pct = geral > 0 ? ((totals[p] / geral) * 100).toFixed(1) : '0,0';
+                return `
+                    <tr${totals[p] > 0 ? ' class="total-row"' : ''}>
+                        <td>${p}</td>
+                        <td style="text-align:right">R$ ${totals[p].toFixed(2)}</td>
+                        <td style="text-align:right">${counts[p]}</td>
+                        <td style="text-align:right">${pct}%</td>
+                    </tr>
+                `;
+            }).join('') + `
+                <tr class="total-row">
+                    <td><strong>TOTAL</strong></td>
+                    <td style="text-align:right"><strong>R$ ${geral.toFixed(2)}</strong></td>
+                    <td style="text-align:right"><strong>${transactions.length}</strong></td>
+                    <td style="text-align:right"><strong>100%</strong></td>
+                </tr>
+            `;
+            document.getElementById('summary-body').innerHTML = summaryHtml;
+        }
+        
+        // ===================== ABA POR CATEGORIA =====================
+        function valueFor(tx, person) {
+            if (person === '__todas') return tx.value;
+            return tx.splits.filter(s => s.owner === person).reduce((a, s) => a + s.value, 0);
+        }
+
+        function personTotals(pool) {
+            const totals = {}, counts = {};
+            getAllPeople().forEach(p => { totals[p] = 0; counts[p] = 0; });
+            pool.forEach(tx => tx.splits.forEach(s => {
+                totals[s.owner] = (totals[s.owner] || 0) + s.value;
+                counts[s.owner] = (counts[s.owner] || 0) + 1;
+            }));
+            return { totals, counts };
+        }
+
+        function setCaPerson(p) { caPerson = p; renderCategoryTab(); }
+
+        let caSource = 'cartao';
+        function setCaSource(src) { caSource = src; renderCategoryTab(); }
+
+        // Gastos fora do cartão viram "transações" da titular para a análise
+        function foraAsTx(month) {
+            return gastosDoMes(month).map(g => ({
+                id: 'g' + g.id + '-' + g.k, date: g.date, title: g.label, value: g.v, category: g.categoria,
+                splits: [{ owner: titular, value: g.v }], fora: true, forma: g.forma
+            }));
+        }
+        function buildCategoryPool() {
+            const card = caSource !== 'fora' ? transactions : [];
+            const fora = caSource !== 'cartao' ? foraAsTx(gastosMonth) : [];
+            return card.concat(fora);
+        }
+        function renderCategorySourceBar() {
+            const sumFor = list => list.reduce((a, tx) => a + valueFor(tx, caPerson), 0);
+            const vCard = sumFor(transactions), vFora = sumFor(foraAsTx(gastosMonth));
+            const opts = [
+                { k: 'cartao', lbl: '💳 Só no cartão' + (currentFaturaId ? ' · ' + faturaLabel(faturas.find(f => f.id === currentFaturaId)).replace(/ · .*/, '') : ''), v: vCard },
+                { k: 'fora', lbl: '💵 Fora do cartão', v: vFora },
+                { k: 'total', lbl: 'Σ Gasto total', v: vCard + vFora }
+            ];
+            document.getElementById('ca-source').innerHTML = opts.map(o => `
+                <button class="${caSource === o.k ? 'active' : ''}" onclick="setCaSource('${o.k}')">
+                    <span class="lbl">${o.lbl}</span><span class="val">${fmt(o.v)}</span>
+                </button>`).join('');
+            const monthBox = document.getElementById('ca-month');
+            if (caSource === 'cartao') { monthBox.innerHTML = ''; return; }
+            monthBox.innerHTML = `Mês dos gastos fora do cartão:
+                <select onchange="gastosMonth = this.value; renderCategoryTab();">${monthOptionsHtml()}</select>`;
+        }
+
+        function renderCategoryTab() {
+            const pool = buildCategoryPool();
+            const SRC = { cartao: { noun: 'no cartão', da: 'do cartão', tot: 'Total no cartão' }, fora: { noun: 'fora do cartão', da: 'fora do cartão', tot: 'Total fora do cartão' }, total: { noun: 'no total', da: 'no total (cartão + fora)', tot: 'Gasto total' } }[caSource];
+            renderCategorySourceBar();
+            const isAll = caPerson === '__todas';
+            const personLabel = isAll ? 'Todas as pessoas' : caPerson;
+            const { totals, counts } = personTotals(pool);
+            const peopleWithSpend = getAllPeople().filter(p => totals[p] !== 0);
+            const faturaTotal = pool.reduce((a, t) => a + t.value, 0);
+
+            // Filtro por pessoa (chips)
+            const chips = [{ key: '__todas', label: 'Todas', color: '#52514e' }]
+                .concat(getAllPeople().map(p => ({ key: p, label: p, color: personColor(p) })));
+            document.getElementById('ca-filter').innerHTML = chips.map(c => `
+                <button class="ca-chip ${caPerson === c.key ? 'active' : ''}" style="${caPerson === c.key ? 'background:' + c.color : ''}" data-p="${esc(c.key)}" onclick="setCaPerson(this.dataset.p)">
+                    <span class="ca-chip-dot" style="background:${c.color}"></span>${esc(c.label)}
+                </button>`).join('');
+
+            document.getElementById('ca-subtitle').textContent = isAll
+                ? `Todos os gastos ${SRC.da}, de todas as pessoas, separados por categoria`
+                : `Gastos de ${caPerson} ${SRC.noun} por categoria (em transações divididas, entra só a parte de ${caPerson})`;
+
+            // Itens da pessoa selecionada
+            const items = pool.map(tx => ({ tx, v: valueFor(tx, caPerson) })).filter(i => i.v !== 0);
+            const personTotal = items.reduce((a, i) => a + i.v, 0);
+
+            if (items.length === 0) {
+                if (caChart) { caChart.destroy(); caChart = null; }
+                document.getElementById('ca-content').innerHTML = `<div class="ca-empty">${caSource === 'fora'
+                    ? 'Nenhum gasto fora do cartão neste mês' + (isAll || caPerson === titular ? '. Registre na aba 💵 Meus gastos.' : ' (gastos fora do cartão entram no nome da titular).')
+                    : (transactions.length === 0 && caSource === 'cartao' ? 'Nenhuma fatura carregada. Importe o PDF ou o CSV da fatura.' : 'Nenhum gasto atribuído a ' + esc(personLabel) + ' ' + SRC.noun + '.')}</div>`;
+                return;
+            }
+
+            // Agrupar por categoria
+            const byCat = {};
+            items.forEach(i => {
+                const c = i.tx.category;
+                if (!byCat[c]) byCat[c] = { name: c, total: 0, items: [] };
+                byCat[c].total += i.v;
+                byCat[c].items.push(i);
+            });
+            const cats = Object.values(byCat).sort((a, b) => b.total - a.total);
+            const maxCat = Math.max(...cats.map(c => c.total), 0.01);
+            const top = cats[0];
+            const pctOf = v => personTotal !== 0 ? (v / personTotal) * 100 : 0;
+
+            const thainaTotal = totals[titular] || 0;
+            const outrasTotal = faturaTotal - thainaTotal;
+
+            // ---- Métricas ----
+            let metrics;
+            if (isAll) {
+                metrics = `
+                    <div class="ca-metric"><div class="ca-metric-label">${SRC.tot}</div><div class="ca-metric-value highlight">${fmt(faturaTotal)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">${esc(titular)} (titular)</div><div class="ca-metric-value highlight">${fmt(thainaTotal)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Outras pessoas</div><div class="ca-metric-value highlight">${fmt(outrasTotal)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Compartilhado</div><div class="ca-metric-value">${fmtPct(faturaTotal ? outrasTotal / faturaTotal * 100 : 0)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Maior categoria</div><div class="ca-metric-value small">${esc(top.name)}</div></div>`;
+            } else {
+                metrics = `
+                    <div class="ca-metric"><div class="ca-metric-label">Gasto de ${esc(caPerson)}</div><div class="ca-metric-value highlight">${fmt(personTotal)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">% ${SRC.da}</div><div class="ca-metric-value">${fmtPct(faturaTotal ? personTotal / faturaTotal * 100 : 0)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Transações</div><div class="ca-metric-value">${items.length}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Ticket médio</div><div class="ca-metric-value">${fmt(personTotal / items.length)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Maior categoria</div><div class="ca-metric-value small">${esc(top.name)}</div></div>`;
+            }
+
+            // ---- Alerta ----
+            const others = peopleWithSpend.filter(p => p !== titular);
+            let alertHtml = '';
+            if (isAll && outrasTotal > 0 && faturaTotal > 0 && caSource !== 'fora') {
+                alertHtml = `<div class="ca-alert-box"><div class="ca-alert-text"><strong>⚠️ Fatura compartilhada:</strong> ${fmtPct(outrasTotal / faturaTotal * 100)} desta fatura (${fmt(outrasTotal)}) é de outras pessoas: ${others.map(esc).join(', ')}. O gasto real de ${esc(titular)} é de ${fmt(thainaTotal)}.</div></div>`;
+            }
+
+            // ---- Comparação ----
+            const compareLeft = isAll
+                ? { title: `👤 ${esc(titular.toUpperCase())} (titular)`, value: thainaTotal, sub: `${counts[titular] || 0} transações · gasto pessoal da titular`, bg: '#E3F2FD', color: '#1976D2' }
+                : { title: `👤 ${esc(caPerson.toUpperCase())}`, value: personTotal, sub: `${items.length} transações · ${fmtPct(faturaTotal ? personTotal / faturaTotal * 100 : 0)} da fatura`, bg: personColor(caPerson) + '18', color: personColor(caPerson) };
+            const compareHtml = `
+                <div class="ca-card">
+                    <p class="ca-card-title">Comparação: ${isAll ? esc(titular) : esc(caPerson)} vs. total</p>
+                    <div class="ca-split-container">
+                        <div class="ca-split-box" style="background:${compareLeft.bg}">
+                            <div class="ca-split-title">${compareLeft.title}</div>
+                            <div class="ca-split-value" style="color:${compareLeft.color}">${fmt(compareLeft.value)}</div>
+                            <div class="ca-split-sub">${compareLeft.sub}</div>
+                        </div>
+                        <div class="ca-split-box" style="background:#FFF3E0">
+                            <div class="ca-split-title">👥 ${SRC.tot.toUpperCase()}</div>
+                            <div class="ca-split-value" style="color:#F57C00">${fmt(faturaTotal)}</div>
+                            <div class="ca-split-sub">${pool.length} transações · incluindo todas as pessoas</div>
+                        </div>
+                    </div>
+                </div>`;
+
+            // ---- Quem usa o cartão ----
+            const rankPeople = getAllPeople().filter(p => totals[p] !== 0).sort((a, b) => totals[b] - totals[a]);
+            const whoHtml = caSource === 'fora' ? '' : `
+                <div class="ca-card">
+                    <p class="ca-card-title">Quem usa o cartão?</p>
+                    <div style="overflow-x:auto">
+                    <table class="ca-table">
+                        <thead><tr><th>Pessoa</th><th class="num">Gasto (R$)</th><th class="num">%</th><th class="num">Transações</th></tr></thead>
+                        <tbody>
+                            ${rankPeople.map(p => `
+                                <tr style="${p === caPerson ? 'background:' + personColor(p) + '18;font-weight:600' : ''}">
+                                    <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${personColor(p)};margin-right:6px"></span>${esc(p)}${p === titular ? ' (titular)' : ''}</td>
+                                    <td class="num">${fmtNum(totals[p])}</td>
+                                    <td class="num">${fmtPct(faturaTotal ? totals[p] / faturaTotal * 100 : 0)}</td>
+                                    <td class="num">${counts[p]}</td>
+                                </tr>`).join('')}
+                            <tr class="ca-total-row"><td>TOTAL</td><td class="num">${fmtNum(faturaTotal)}</td><td class="num">100%</td><td class="num">${pool.length}</td></tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>`;
+
+            // ---- Barras + rosca ----
+            const barsHtml = `
+                <div class="ca-card">
+                    <p class="ca-card-title">Gastos ${isAll ? SRC.da : 'de ' + esc(caPerson) + ' ' + SRC.noun} por categoria</p>
+                    <div class="ca-cat-grid">
+                        <div class="ca-bar-list">
+                            ${cats.map(c => `
+                                <div class="ca-bar-row">
+                                    <span class="ca-bar-name">${esc(c.name)}</span>
+                                    <div class="ca-bar-wrap"><div class="ca-bar-fill" style="width:${Math.max(0, c.total / maxCat * 100).toFixed(1)}%;background:${catColor(c.name)}"></div></div>
+                                    <span class="ca-bar-amt">${fmt(c.total)}</span>
+                                </div>`).join('')}
+                        </div>
+                        <div class="ca-chart-box"><canvas id="ca-chart" role="img" aria-label="Gráfico de rosca dos gastos por categoria"></canvas></div>
+                    </div>
+                </div>`;
+
+            // ---- Detalhe por categoria ----
+            const detailHtml = `
+                <div class="ca-card">
+                    <p class="ca-card-title">Detalhe por categoria</p>
+                    ${cats.map(c => `
+                        <details class="ca-cat-section">
+                            <summary>
+                                <span class="ca-cat-dot" style="background:${catColor(c.name)}"></span>
+                                <span class="ca-cat-name">${esc(c.name)} <span style="font-weight:400;color:var(--ca-sec);font-size:11px">(${c.items.length})</span></span>
+                                <span class="ca-cat-total">${fmt(c.total)}</span>
+                                <span class="ca-cat-pct">${fmtPct(pctOf(c.total))}</span>
+                            </summary>
+                            <div class="ca-cat-items">
+                                <table class="ca-table">
+                                    <tbody>
+                                        ${c.items.sort((a, b) => b.v - a.v).map(i => `
+                                            <tr>
+                                                <td style="color:var(--ca-sec);width:80px">${esc(i.tx.date)}</td>
+                                                <td>${esc(i.tx.title)}${i.tx.fora ? `<span class="ca-tag">${esc(i.tx.forma)}</span>` : ''}${i.tx.splits.length > 1 ? ' <span style="color:var(--ca-sec);font-size:11px">(dividida)</span>' : ''}${isAll && !i.tx.fora && i.tx.splits.length === 1 ? ` <span style="color:${personColor(i.tx.splits[0].owner)};font-size:11px">· ${esc(i.tx.splits[0].owner)}</span>` : ''}</td>
+                                                <td class="num">${fmt(i.v)}</td>
+                                            </tr>`).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>`).join('')}
+                </div>`;
+
+            // ---- Insights automáticos ----
+            const insights = [];
+            const ins = (type, html) => insights.push({ type, html });
+            if (caSource === 'total') {
+                const cartaoV = items.filter(i => !i.tx.fora).reduce((a, i) => a + i.v, 0);
+                const foraV = items.filter(i => i.tx.fora).reduce((a, i) => a + i.v, 0);
+                ins('info', `<strong>Cartão x fora do cartão:</strong> ${fmt(cartaoV)} no cartão (${fmtPct(pctOf(cartaoV))}) e ${fmt(foraV)} fora do cartão (${fmtPct(pctOf(foraV))}).`);
+            }
+            if (caSource === 'fora') {
+                const porForma = {};
+                items.forEach(i => { porForma[i.tx.forma] = (porForma[i.tx.forma] || 0) + i.v; });
+                const lista = Object.entries(porForma).sort((a, b) => b[1] - a[1]).map(([f, v]) => `${esc(f)} ${fmt(v)}`).join(', ');
+                ins('info', `<strong>Por forma de pagamento:</strong> ${lista}.`);
+            }
+            if (isAll && outrasTotal > 0 && caSource !== 'fora') {
+                ins('search', `<strong>Entenda a situação:</strong> ${caSource === 'total' ? 'o total soma' : 'a fatura soma'} ${fmt(faturaTotal)}, mas o gasto de ${esc(titular)} é de ${fmt(thainaTotal)}. A diferença de ${fmt(outrasTotal)} é de outras pessoas usando o cartão.`);
+            }
+            ins(pctOf(top.total) >= 30 ? 'warn' : 'info', `<strong>${esc(top.name)} lidera (${fmtPct(pctOf(top.total))}):</strong> ${fmt(top.total)} em ${top.items.length} transaç${top.items.length === 1 ? 'ão' : 'ões'}, a maior categoria ${isAll ? SRC.da : 'de ' + esc(caPerson)}.`);
+
+            const transp = byCat['Transporte'];
+            if (transp) {
+                ins(transp.items.length >= 15 ? 'warn' : 'info', `<strong>Transporte:</strong> ${transp.items.length} corrida${transp.items.length === 1 ? '' : 's'} de Uber/99 somando ${fmt(transp.total)}, média de ${fmt(transp.total / transp.items.length)} por corrida.`);
+            }
+
+            const biggest = items.slice().sort((a, b) => b.v - a.v)[0];
+            ins('info', `<strong>Maior compra:</strong> ${esc(biggest.tx.title)} (${esc(biggest.tx.category)}), ${fmt(biggest.v)} em ${esc(biggest.tx.date)}.`);
+
+            const parc = items.map(i => {
+                if (/\bref\.?\s*\d/i.test(i.tx.title)) return null;
+                const m = i.tx.title.match(/parc(?:ela)?\.?\s*(\d{1,2})\s*\/\s*(\d{1,2})/i) || i.tx.title.match(/(\d{1,2})\s*\/\s*(\d{1,2})/);
+                return m ? { ...i, n: +m[1], of: +m[2] } : null;
+            }).filter(p => p && p.of > 1 && p.n <= p.of);
+            if (parc.length) {
+                const ativas = parc.filter(p => p.n < p.of);
+                const finais = parc.filter(p => p.n === p.of);
+                const somaParc = parc.reduce((a, p) => a + p.v, 0);
+                ins('warn', `<strong>Compras parceladas:</strong> ${parc.length} parcela${parc.length === 1 ? '' : 's'} nesta fatura, somando ${fmt(somaParc)} (${fmtPct(pctOf(somaParc))} do total). ${ativas.length === 0 ? 'Todas terminam nesta fatura.' : ativas.length + ' ainda continua' + (ativas.length === 1 ? '' : 'm') + ' no próximo mês.'}`);
+                if (finais.length) {
+                    const folga = finais.reduce((a, p) => a + p.v, 0);
+                    ins('good', `<strong>Parcelas finalizadas:</strong> ${finais.map(p => esc(p.tx.title)).join(', ')}. Isso libera cerca de ${fmt(folga)} por mês a partir da próxima fatura.`);
+                }
+            }
+
+            const freq = {};
+            items.forEach(i => { const k = i.tx.title.replace(/\s*-?\s*parc(?:ela)?\b.*$/i, '').trim(); freq[k] = (freq[k] || 0) + 1; });
+            const topFreq = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+            if (topFreq && topFreq[1] >= 3) {
+                ins('info', `<strong>Estabelecimento mais frequente:</strong> ${esc(topFreq[0])}, com ${topFreq[1]} compras no período.`);
+            }
+
+            if (byCat['Outros'] && pctOf(byCat['Outros'].total) >= 10) {
+                ins('warn', `<strong>"Outros" está alto (${fmtPct(pctOf(byCat['Outros'].total))}):</strong> ${byCat['Outros'].items.length} transações sem categoria definida. Vale reclassificá-las na aba Transações para a análise ficar mais precisa.`);
+            }
+
+            if (isAll) {
+                others.forEach(p => {
+                    const pItems = pool.map(tx => ({ tx, v: valueFor(tx, p) })).filter(i => i.v !== 0).sort((a, b) => b.v - a.v);
+                    const lista = pItems.slice(0, 6).map(i => `${esc(i.tx.title)} (${fmt(i.v)})`).join(', ');
+                    ins('info', `<strong>${esc(p)} gastou ${fmt(totals[p])}:</strong> ${lista}${pItems.length > 6 ? ` e mais ${pItems.length - 6}` : ''}. Valor a acertar.`);
+                });
+            }
+
+            const iconMap = {
+                search: { bg: '#E8F5E9', ic: '🔍' },
+                warn: { bg: '#FCEBEB', ic: '⚠' },
+                info: { bg: '#E6F1FB', ic: 'i' },
+                good: { bg: '#EAF3DE', ic: '✓' }
+            };
+            const insightsHtml = `
+                <div class="ca-card">
+                    <p class="ca-card-title">Análise e alertas</p>
+                    ${insights.map(i => `
+                        <div class="ca-insight">
+                            <div class="ca-insight-icon" style="background:${iconMap[i.type].bg}">${iconMap[i.type].ic}</div>
+                            <div class="ca-insight-text">${i.html}</div>
+                        </div>`).join('')}
+                </div>`;
+
+            // ---- Tabela resumo ----
+            const resumoHtml = `
+                <div class="ca-card">
+                    <p class="ca-card-title">
+                        <span>Resumo ${isAll ? SRC.da : 'de ' + esc(caPerson) + ' ' + SRC.noun}, copie para o app</span>
+                        <button class="ca-copy-btn" id="ca-copy-btn" onclick="copyResumo()">📋 Copiar tabela</button>
+                    </p>
+                    <table class="ca-table">
+                        <thead><tr><th>Categoria</th><th class="num">R$</th><th class="num">%</th></tr></thead>
+                        <tbody>
+                            ${cats.map(c => `<tr><td>${esc(c.name)}</td><td class="num">${fmtNum(c.total)}</td><td class="num">${fmtPct(pctOf(c.total))}</td></tr>`).join('')}
+                            <tr class="ca-total-row"><td>TOTAL (${esc(isAll ? 'todas as pessoas' : caPerson)})</td><td class="num" style="color:#A32D2D">${fmtNum(personTotal)}</td><td class="num" style="color:#A32D2D">100%</td></tr>
+                        </tbody>
+                    </table>
+                </div>`;
+
+            window._caResumo = ['Categoria\tR$\t%']
+                .concat(cats.map(c => `${c.name}\t${fmtNum(c.total)}\t${fmtPct(pctOf(c.total))}`))
+                .concat([`TOTAL\t${fmtNum(personTotal)}\t100%`]).join('\n');
+
+            document.getElementById('ca-content').innerHTML =
+                `<div class="ca-metrics">${metrics}</div>` + alertHtml + compareHtml + whoHtml + barsHtml + insightsHtml + detailHtml + resumoHtml;
+
+            // ---- Gráfico de rosca ----
+            if (caChart) caChart.destroy();
+            caChart = null;
+            if (typeof Chart === 'undefined') return;
+            const chartCats = cats.filter(c => c.total > 0);
+            caChart = new Chart(document.getElementById('ca-chart'), {
+                type: 'doughnut',
+                data: {
+                    labels: chartCats.map(c => c.name),
+                    datasets: [{ data: chartCats.map(c => +c.total.toFixed(2)), backgroundColor: chartCats.map(c => catColor(c.name)), borderWidth: 2, borderColor: '#ffffff' }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '58%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: ctx => {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            return ' ' + fmt(ctx.parsed) + ' (' + fmtPct(ctx.parsed / total * 100) + ')';
+                        } } }
+                    }
+                }
+            });
+        }
+
+        function copyResumo() {
+            const text = window._caResumo || '';
+            const done = () => {
+                const b = document.getElementById('ca-copy-btn');
+                if (b) { b.textContent = '✓ Copiado'; setTimeout(() => { b.textContent = '📋 Copiar tabela'; }, 1500); }
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+            } else fallbackCopy(text, done);
+        }
+        function fallbackCopy(text, done) {
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); done(); } catch (e) { alert('Não foi possível copiar automaticamente.'); }
+            ta.remove();
+        }
+
+        // ===================== DADOS SALVOS (gastos, promissórias, categorias) =====================
+        const DATA_KEY = 'analiseNubank.dados.v1';
+        const DEFAULT_CAT_NAMES = categories.map(c => c.name);
+        let gastos = [];
+        let promissorias = [];
+        let editingGastoId = null;
+        let editingPromId = null;
+        const FORMAS = ['Dinheiro', 'Pix', 'Débito', 'Boleto', 'Outro'];
+        const FORMA_ICON = { 'Dinheiro': '💵', 'Pix': '⚡', 'Débito': '🏧', 'Boleto': '🧾', 'Outro': '•' };
+        const ORIGENS = ['Cartão de crédito', 'Empréstimo em dinheiro', 'Pix', 'Boleto / crediário', 'Outro'];
+
+        function todayISO() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        let gastosMonth = todayISO().slice(0, 7);
+
+        function addMonthsISO(iso, k) {
+            const [y, m, d] = iso.split('-').map(Number);
+            const t = new Date(y, m - 1 + k, 1);
+            const last = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+        }
+        function fmtDate(iso) {
+            if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso || '';
+            const [y, m, d] = iso.slice(0, 10).split('-');
+            return `${d}/${m}/${y}`;
+        }
+        const MESES_NOME = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        function monthLabel(ym) {
+            if (ym === '__todos') return 'Todos os meses';
+            const [y, m] = ym.split('-').map(Number);
+            return `${MESES_NOME[m - 1]} de ${y}`;
+        }
+        function splitCents(total, n) {
+            const cents = Math.round(total * 100), base = Math.trunc(cents / n);
+            let rest = cents - base * n;
+            return Array.from({ length: n }, () => { let c = base; if (rest > 0) { c++; rest--; } return c / 100; });
+        }
+
+        // ===================== ESTADO E ARMAZENAMENTO =====================
+        // Modo local: tudo no navegador. Modo planilha: tudo numa aba da planilha Google, por usuário.
+        const PLANILHA_URL = 'https://script.google.com/macros/s/AKfycbzUCK68sjy7KYrUUN9BauIf4daq6SXr9lOeGkqsfVK4YI8HZdIUBVA1RiXRubMPwRqQSg/exec'
+        const URL_KEY = 'analiseNubank.planilhaUrl.v1';
+        const SESSION_KEY = 'analiseNubank.sessao.v1';
+        function getSheetUrl() { return PLANILHA_URL || localStorage.getItem(URL_KEY) || ''; }
+        const cloudMode = !!getSheetUrl();
+        let session = null;
+        let lastSynced = '';
+        let lastLocal = '';
+        let syncTimer = null, syncing = false, pendingSync = false;
+
+        function getState() {
+            return {
+                titular, people, gastos, promissorias,
+                categoriasExtras: categories.filter(c => !DEFAULT_CAT_NAMES.includes(c.name)),
+                faturas: faturas.map(f => ({
+                    id: f.id, banco: f.banco, venc: f.venc, importadoEm: f.importadoEm,
+                    transactions: f.transactions.map(t => ({ key: t.key, date: t.date, title: t.title, value: t.value, category: t.category, splits: t.splits }))
+                }))
+            };
+        }
+        function applyState(d) {
+            d = d || {};
+            titular = d.titular || titular || '';
+            people = Array.isArray(d.people) ? d.people.filter(p => p && p !== titular) : [];
+            gastos = Array.isArray(d.gastos) ? d.gastos : [];
+            promissorias = Array.isArray(d.promissorias) ? d.promissorias : [];
+            (d.categoriasExtras || []).forEach(c => {
+                if (c && c.name && !categories.some(x => x.name === c.name)) categories.splice(categories.length - 1, 0, { name: c.name, color: c.color || '#888780' });
+            });
+            faturas = Array.isArray(d.faturas) ? d.faturas.filter(f => f && f.id && Array.isArray(f.transactions)) : [];
+            faturas.forEach(f => f.transactions.forEach(t => {
+                if (!t.key) t.key = `${t.date}|${normTitle(t.title)}|${Number(t.value).toFixed(2)}#1`;
+            }));
+        }
+        function readLocalState() {
+            let p = null, d = null;
+            try { p = JSON.parse(localStorage.getItem(PEOPLE_KEY) || 'null'); } catch (e) {}
+            try { d = JSON.parse(localStorage.getItem(DATA_KEY) || 'null'); } catch (e) {}
+            if (!p && !d) return null;
+            return Object.assign({}, d || {}, { titular: p && p.titular, people: p && p.people });
+        }
+        function hasContent(st) {
+            return !!(st && (st.titular || (st.gastos || []).length || (st.promissorias || []).length || (st.faturas || []).length));
+        }
+
+        // Chamado depois de qualquer alteração: grava no navegador ou agenda o envio para a planilha
+        function persist() {
+            const snap = JSON.stringify(getState());
+            if (cloudMode) {
+                if (session && snap !== lastSynced) scheduleSync();
+                return;
+            }
+            if (snap === lastLocal) return;
+            try {
+                const st = JSON.parse(snap);
+                localStorage.setItem(PEOPLE_KEY, JSON.stringify({ titular: st.titular, people: st.people }));
+                localStorage.setItem(DATA_KEY, JSON.stringify({ gastos: st.gastos, promissorias: st.promissorias, categoriasExtras: st.categoriasExtras, faturas: st.faturas }));
+                lastLocal = snap;
+            } catch (e) { alert('Não foi possível salvar no navegador. Faça um backup para não perder os dados.'); }
+        }
+        function saveData() { persist(); }
+
+        // ---------- Planilha Google (Apps Script) ----------
+        async function callSheet(acao, extra) {
+            const body = Object.assign({ acao, nome: session && session.nome, codigo: session && session.codigo }, extra || {});
+            const res = await fetch(getSheetUrl(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) throw new Error('A planilha respondeu com erro ' + res.status);
+            return res.json();
+        }
+        function setSyncStatus(kind, extra) {
+            const el = document.getElementById('sync-status');
+            if (!el) return;
+            const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const map = {
+                pending: ['', '✏️ Alterações a salvar...'],
+                saving: ['', '⏳ Salvando na planilha...'],
+                ok: ['ok', `☁️ Salvo na planilha às ${hora}`],
+                error: ['err', `⚠️ Não foi possível salvar${extra ? ' (' + extra + ')' : ''}. Nova tentativa em instantes.`]
+            };
+            el.className = 'st ' + map[kind][0];
+            el.textContent = map[kind][1];
+        }
+        function scheduleSync() {
+            setSyncStatus('pending');
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(() => doSync(), 1200);
+        }
+        async function doSync(force) {
+            if (!cloudMode || !session) return;
+            clearTimeout(syncTimer);
+            if (syncing) { pendingSync = true; return; }
+            const snap = JSON.stringify(getState());
+            if (snap === lastSynced && !force) { setSyncStatus('ok'); return; }
+            syncing = true;
+            setSyncStatus('saving');
+            try {
+                const r = await callSheet('salvar', { dados: JSON.parse(snap) });
+                if (!r.ok) {
+                    if (/código|usuário/i.test(r.erro || '')) { alert('Sua sessão não é mais válida: ' + r.erro); doLogout(true); return; }
+                    throw new Error(r.erro);
+                }
+                lastSynced = snap;
+                setSyncStatus('ok');
+            } catch (e) {
+                setSyncStatus('error', e.message);
+                syncTimer = setTimeout(() => doSync(), 15000);
+            } finally {
+                syncing = false;
+                if (pendingSync) { pendingSync = false; doSync(); }
+            }
+        }
+
+        function showLogin(msg) {
+            document.getElementById('login-card').style.display = 'block';
+            document.getElementById('app-body').style.display = 'none';
+            const el = document.getElementById('login-msg');
+            el.textContent = msg || '';
+            el.className = 'msg' + (msg ? ' err' : '');
+        }
+        async function doLogin(registrar, saved) {
+            const nome = saved ? saved.nome : document.getElementById('login-nome').value.trim();
+            const codigo = saved ? saved.codigo : document.getElementById('login-codigo').value.trim();
+            const msg = document.getElementById('login-msg');
+            if (!nome || codigo.length < 4) { msg.className = 'msg err'; msg.textContent = 'Informe seu nome e um código com pelo menos 4 dígitos.'; return; }
+            const btns = [document.getElementById('login-btn'), document.getElementById('register-btn')];
+            btns.forEach(b => b.disabled = true);
+            msg.className = 'msg'; msg.textContent = registrar ? 'Criando seu acesso...' : 'Entrando...';
+            session = { nome, codigo };
+            try {
+                if (registrar) {
+                    const r = await callSheet('registrar');
+                    if (!r.ok) throw new Error(r.erro);
+                }
+                const r = await callSheet('carregar');
+                if (!r.ok) throw new Error(r.erro);
+                const keep = saved ? saved.keep : document.getElementById('login-keep').checked;
+                session.keep = keep;
+                const store = keep ? localStorage : sessionStorage;
+                store.setItem(SESSION_KEY, JSON.stringify(session));
+                startCloudSession(r.dados);
+            } catch (e) {
+                session = null;
+                try { localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY); } catch (er) {}
+                showLogin(e.message === 'Failed to fetch' ? 'Não foi possível falar com a planilha. Verifique a internet e a URL configurada.' : e.message);
+            } finally {
+                btns.forEach(b => b.disabled = false);
+            }
+        }
+        function startCloudSession(dados) {
+            let st = dados;
+            let migrou = false;
+            if (!hasContent(st)) {
+                const local = readLocalState();
+                if (hasContent(local) && confirm('Encontrei dados salvos neste navegador (de antes da planilha). Enviar esses dados para a sua aba na planilha?')) {
+                    st = local; migrou = true;
+                }
+            }
+            titular = ''; people = [];
+            applyState(st || {});
+            if (!titular) titular = session.nome;
+            lastSynced = migrou || !hasContent(dados) ? '' : JSON.stringify(getState());
+            document.getElementById('login-card').style.display = 'none';
+            document.getElementById('app-body').style.display = 'block';
+            document.getElementById('sync-bar').style.display = 'flex';
+            document.getElementById('sync-who').textContent = '👤 ' + session.nome;
+            document.getElementById('pp-sub').textContent = 'Quem usa o cartão. Tudo fica salvo na sua aba da planilha.';
+            document.getElementById('connect-btn').textContent = localStorage.getItem(URL_KEY) && !PLANILHA_URL ? '🔌 Desconectar planilha' : '';
+            document.getElementById('connect-btn').style.display = localStorage.getItem(URL_KEY) && !PLANILHA_URL ? 'inline-block' : 'none';
+            setSyncStatus('ok');
+            renderPeoplePanel();
+            selectLatestFatura();
+            switchTab(activeTab);
+            if (!lastSynced) doSync();
+        }
+        function doLogout(skipConfirm) {
+            if (!skipConfirm && session && JSON.stringify(getState()) !== lastSynced &&
+                !confirm('Há alterações ainda não salvas na planilha. Sair mesmo assim?')) return;
+            try { localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+            session = null;
+            location.reload();
+        }
+        function connectSheet() {
+            if (cloudMode) {
+                if (PLANILHA_URL) return;
+                if (!confirm('Desconectar a planilha neste navegador? Os dados continuam salvos na planilha.')) return;
+                localStorage.removeItem(URL_KEY);
+                try { localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+                location.reload();
+                return;
+            }
+            const url = (prompt('Cole a URL do Apps Script (termina em /exec):') || '').trim();
+            if (!url) return;
+            if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) { alert('URL inválida. Ela deve começar com https://script.google.com/ e terminar com /exec.'); return; }
+            localStorage.setItem(URL_KEY, url);
+            location.reload();
+        }
+        window.addEventListener('beforeunload', e => {
+            if (cloudMode && session && JSON.stringify(getState()) !== lastSynced) { e.preventDefault(); e.returnValue = ''; }
+        });
+
+        function promptNewCategory() {
+            const name = (prompt('Nome da nova categoria:') || '').trim();
+            if (!name) return null;
+            let c = categories.find(c => c.name.toLowerCase() === name.toLowerCase());
+            if (!c) {
+                c = { name, color: extraColors[categories.length % extraColors.length] };
+                categories.splice(categories.length - 1, 0, c);
+                saveData();
+            }
+            return c.name;
+        }
+
+        // ---------- Backup ----------
+        function exportBackup() {
+            const data = Object.assign({ app: 'analise-fatura', versao: 2, exportadoEm: new Date().toISOString() }, getState());
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `backup-analise-fatura-${todayISO()}.json`;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        }
+        function importBackup(input) {
+            const file = input.files[0];
+            input.value = '';
+            if (!file) return;
+            file.text().then(txt => {
+                let d;
+                try { d = JSON.parse(txt); } catch (e) { alert('Arquivo inválido: não é um backup deste app.'); return; }
+                if (!d || d.app !== 'analise-fatura') { alert('Arquivo inválido: não é um backup deste app.'); return; }
+                const resumo = `${(d.faturas || []).length} faturas, ${(d.gastos || []).length} gastos e ${(d.promissorias || []).length} promissórias`;
+                if (!confirm(`Importar o backup (${resumo})? Isso substitui os dados atuais${cloudMode ? ' da sua aba na planilha' : ' deste navegador'}.`)) return;
+                const keepTit = titular;
+                titular = '';
+                applyState(d);
+                if (!titular) titular = keepTit;
+                renderPeoplePanel();
+                selectLatestFatura();
+                persist();
+                switchTab(activeTab);
+                alert('Backup importado com sucesso.');
+            });
+        }
+
+        // ---------- Meus gastos ----------
+        // Cada gasto parcelado vira uma parcela por mês a partir da data
+        function gastosDoMes(month) {
+            const out = [];
+            gastos.forEach(g => {
+                const n = Math.max(1, g.parcelas || 1);
+                const vals = splitCents(g.valor, n);
+                for (let k = 0; k < n; k++) {
+                    const date = addMonthsISO(g.data, k);
+                    if (month !== '__todos' && date.slice(0, 7) !== month) continue;
+                    out.push({ id: g.id, k, date, v: vals[k], forma: g.forma, categoria: g.categoria,
+                        label: n > 1 ? `${g.desc} · parcela ${k + 1}/${n}` : g.desc, g });
+                }
+            });
+            return out.sort((a, b) => b.date.localeCompare(a.date));
+        }
+        function monthOptionsHtml() {
+            const set = new Set([todayISO().slice(0, 7), gastosMonth === '__todos' ? todayISO().slice(0, 7) : gastosMonth]);
+            gastosDoMes('__todos').forEach(g => set.add(g.date.slice(0, 7)));
+            const months = Array.from(set).sort().reverse();
+            return months.map(m => `<option value="${m}" ${m === gastosMonth ? 'selected' : ''}>${monthLabel(m)}</option>`).join('')
+                + `<option value="__todos" ${gastosMonth === '__todos' ? 'selected' : ''}>Todos os meses</option>`;
+        }
+        function shiftGastosMonth(delta) {
+            const base = gastosMonth === '__todos' ? todayISO().slice(0, 7) : gastosMonth;
+            gastosMonth = addMonthsISO(base + '-01', delta).slice(0, 7);
+            renderGastosTab();
+        }
+        function renderGastoCatSelect(selected) {
+            const sel = document.getElementById('g-cat');
+            const cur = selected !== undefined ? selected : sel.value;
+            sel.innerHTML = categories.map(c => `<option value="${esc(c.name)}" ${c.name === cur ? 'selected' : ''}>${esc(c.name)}</option>`).join('')
+                + '<option value="__nova">➕ Nova categoria...</option>';
+            if (!cur || !categories.some(c => c.name === cur)) sel.value = 'Outros';
+        }
+        function resetGastoForm() {
+            editingGastoId = null;
+            document.getElementById('g-data').value = todayISO();
+            document.getElementById('g-desc').value = '';
+            document.getElementById('g-valor').value = '';
+            document.getElementById('g-parc').value = 1;
+            document.getElementById('g-form-title').textContent = 'Novo gasto';
+            document.getElementById('g-save-btn').textContent = '➕ Adicionar gasto';
+            document.getElementById('g-cancel-btn').style.display = 'none';
+        }
+        function saveGasto() {
+            const data = document.getElementById('g-data').value;
+            const desc = document.getElementById('g-desc').value.trim();
+            const valor = parseFloat(document.getElementById('g-valor').value);
+            const forma = document.getElementById('g-forma').value;
+            const categoria = document.getElementById('g-cat').value;
+            const parcelas = Math.max(1, parseInt(document.getElementById('g-parc').value) || 1);
+            if (!data || !desc || !(valor > 0)) { alert('Preencha data, o que foi e um valor maior que zero.'); return; }
+            if (categoria === '__nova') { alert('Escolha uma categoria.'); return; }
+            const rec = { data, desc, valor: Math.round(valor * 100) / 100, forma, categoria, parcelas };
+            if (editingGastoId !== null) {
+                const g = gastos.find(x => x.id === editingGastoId);
+                if (g) Object.assign(g, rec);
+            } else {
+                gastos.push({ id: Date.now(), ...rec });
+            }
+            saveData();
+            gastosMonth = data.slice(0, 7);
+            resetGastoForm();
+            renderGastosTab();
+            document.getElementById('g-hint').textContent = '✓ Gasto salvo';
+            setTimeout(() => { document.getElementById('g-hint').textContent = ''; }, 2000);
+        }
+        function editGasto(id) {
+            const g = gastos.find(x => x.id === id);
+            if (!g) return;
+            editingGastoId = id;
+            document.getElementById('g-data').value = g.data;
+            document.getElementById('g-desc').value = g.desc;
+            document.getElementById('g-valor').value = g.valor;
+            document.getElementById('g-forma').value = g.forma;
+            renderGastoCatSelect(g.categoria);
+            document.getElementById('g-parc').value = g.parcelas || 1;
+            document.getElementById('g-form-title').textContent = 'Editando gasto';
+            document.getElementById('g-save-btn').textContent = '💾 Salvar alterações';
+            document.getElementById('g-cancel-btn').style.display = 'inline-block';
+            document.getElementById('tab-gastos').scrollIntoView({ behavior: 'smooth' });
+        }
+        function cancelEditGasto() { resetGastoForm(); }
+        function deleteGasto(id) {
+            const g = gastos.find(x => x.id === id);
+            if (!g) return;
+            const msg = (g.parcelas || 1) > 1 ? `Excluir "${g.desc}"? As ${g.parcelas} parcelas serão removidas de todos os meses.` : `Excluir "${g.desc}"?`;
+            if (!confirm(msg)) return;
+            gastos = gastos.filter(x => x.id !== id);
+            if (editingGastoId === id) resetGastoForm();
+            saveData();
+            renderGastosTab();
+        }
+
+        function renderGastosTab() {
+            document.getElementById('g-month').innerHTML = monthOptionsHtml();
+            const sel = document.getElementById('g-cat');
+            if (!sel.options.length) renderGastoCatSelect('Alimentação'); else renderGastoCatSelect();
+            const list = gastosDoMes(gastosMonth);
+            const box = document.getElementById('g-content');
+            if (list.length === 0) {
+                box.innerHTML = `<div class="ca-empty">Nenhum gasto em ${monthLabel(gastosMonth).toLowerCase()}. Use o formulário acima para registrar.</div>`;
+                return;
+            }
+            const total = list.reduce((a, g) => a + g.v, 0);
+            const porForma = {};
+            FORMAS.forEach(f => porForma[f] = 0);
+            list.forEach(g => porForma[g.forma] = (porForma[g.forma] || 0) + g.v);
+            const byCat = {};
+            list.forEach(g => byCat[g.categoria] = (byCat[g.categoria] || 0) + g.v);
+            const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+            const maxC = Math.max(...cats.map(c => c[1]), 0.01);
+            const parceladosAtivos = list.filter(g => (g.g.parcelas || 1) > 1).length;
+
+            box.innerHTML = `
+                <div class="ca-metrics">
+                    <div class="ca-metric"><div class="ca-metric-label">Total ${gastosMonth === '__todos' ? 'geral' : 'do mês'}</div><div class="ca-metric-value highlight">${fmt(total)}</div></div>
+                    ${FORMAS.filter(f => porForma[f] > 0 || ['Dinheiro', 'Pix'].includes(f)).map(f => `
+                        <div class="ca-metric"><div class="ca-metric-label">${FORMA_ICON[f]} ${f}</div><div class="ca-metric-value">${fmt(porForma[f] || 0)}</div></div>`).join('')}
+                    <div class="ca-metric"><div class="ca-metric-label">Lançamentos</div><div class="ca-metric-value">${list.length}</div></div>
+                </div>
+                <div class="ca-card">
+                    <p class="ca-card-title">Por categoria</p>
+                    <div class="ca-bar-list">
+                        ${cats.map(([c, v]) => `
+                            <div class="ca-bar-row">
+                                <span class="ca-bar-name">${esc(c)}</span>
+                                <div class="ca-bar-wrap"><div class="ca-bar-fill" style="width:${(v / maxC * 100).toFixed(1)}%;background:${catColor(c)}"></div></div>
+                                <span class="ca-bar-amt">${fmt(v)}</span>
+                            </div>`).join('')}
+                    </div>
+                </div>
+                <div class="ca-card">
+                    <p class="ca-card-title"><span>Lançamentos de ${monthLabel(gastosMonth).toLowerCase()}</span>${parceladosAtivos ? `<span style="text-transform:none;letter-spacing:0">${parceladosAtivos} parcela${parceladosAtivos > 1 ? 's' : ''} de compras parceladas</span>` : ''}</p>
+                    <div style="overflow-x:auto">
+                    <table class="ca-table">
+                        <thead><tr><th>Data</th><th>O que foi</th><th>Categoria</th><th>Forma</th><th class="num">Valor</th><th></th></tr></thead>
+                        <tbody>
+                            ${list.map(g => `
+                                <tr>
+                                    <td style="white-space:nowrap">${fmtDate(g.date)}</td>
+                                    <td>${esc(g.label)}${(g.g.parcelas || 1) > 1 ? `<div style="font-size:11px;color:var(--ca-sec)">Total ${fmt(g.g.valor)} em ${g.g.parcelas}x</div>` : ''}</td>
+                                    <td><span class="ca-cat-dot" style="display:inline-block;background:${catColor(g.categoria)};margin-right:6px;vertical-align:middle"></span>${esc(g.categoria)}</td>
+                                    <td><span class="forma-badge">${FORMA_ICON[g.forma] || ''} ${esc(g.forma)}</span></td>
+                                    <td class="num">${fmt(g.v)}</td>
+                                    <td style="white-space:nowrap;text-align:right">
+                                        <button class="ic-btn" title="Editar" onclick="editGasto(${g.id})">✎</button>
+                                        <button class="ic-btn" title="Excluir" onclick="deleteGasto(${g.id})">🗑</button>
+                                    </td>
+                                </tr>`).join('')}
+                            <tr class="ca-total-row"><td colspan="4">TOTAL</td><td class="num" style="color:#A32D2D">${fmt(total)}</td><td></td></tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>`;
+        }
+
+        // ---------- Promissórias ----------
+        let promFilterPessoa = '__todas';
+        let promFilterStatus = 'aberto';
+        const openPromCards = new Set();
+
+        function parcelaStatus(pg, venc) {
+            if (pg.pago) return 'paga';
+            return venc < todayISO() ? 'atrasada' : 'avencer';
+        }
+        function promResumo(p) {
+            const n = p.pagamentos.length;
+            const pagas = p.pagamentos.filter(x => x.pago).length;
+            const atrasadas = p.pagamentos.filter((x, i) => !x.pago && addMonthsISO(p.primeiroVenc, i) < todayISO()).length;
+            const total = Math.round(p.valorParcela * n * 100) / 100;
+            const pago = Math.round(p.valorParcela * pagas * 100) / 100;
+            return { n, pagas, faltam: n - pagas, atrasadas, total, pago, falta: Math.round((total - pago) * 100) / 100, quitada: pagas === n };
+        }
+        function suggestFirstDue() {
+            const d = document.getElementById('p-data').value;
+            if (d && editingPromId === null) document.getElementById('p-venc').value = addMonthsISO(d, 1);
+        }
+        function resetPromForm() {
+            editingPromId = null;
+            ['p-pessoa', 'p-desc', 'p-valor'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('p-n').value = 1;
+            document.getElementById('p-data').value = todayISO();
+            document.getElementById('p-venc').value = addMonthsISO(todayISO(), 1);
+            document.getElementById('p-form-title').textContent = 'Nova promissória';
+            document.getElementById('p-save-btn').textContent = '➕ Adicionar promissória';
+            document.getElementById('p-cancel-btn').style.display = 'none';
+        }
+        function savePromissoria() {
+            const pessoa = document.getElementById('p-pessoa').value.trim();
+            const desc = document.getElementById('p-desc').value.trim();
+            const origem = document.getElementById('p-origem').value;
+            const data = document.getElementById('p-data').value;
+            const n = Math.max(1, parseInt(document.getElementById('p-n').value) || 1);
+            const valorParcela = parseFloat(document.getElementById('p-valor').value);
+            const primeiroVenc = document.getElementById('p-venc').value || (data ? addMonthsISO(data, 1) : '');
+            if (!pessoa || !desc || !data || !(valorParcela > 0)) { alert('Preencha pessoa, o que foi, data e o valor da parcela.'); return; }
+            const rec = { pessoa, desc, origem, data, valorParcela: Math.round(valorParcela * 100) / 100, primeiroVenc };
+            if (editingPromId !== null) {
+                const p = promissorias.find(x => x.id === editingPromId);
+                if (p) {
+                    Object.assign(p, rec);
+                    const pg = p.pagamentos.slice(0, n);
+                    while (pg.length < n) pg.push({ pago: false, data: null });
+                    p.pagamentos = pg;
+                }
+            } else {
+                promissorias.push({ id: Date.now(), ...rec, pagamentos: Array.from({ length: n }, () => ({ pago: false, data: null })) });
+            }
+            saveData();
+            resetPromForm();
+            renderPromissoriasTab();
+            document.getElementById('p-hint').textContent = '✓ Promissória salva';
+            setTimeout(() => { document.getElementById('p-hint').textContent = ''; }, 2000);
+        }
+        function editPromissoria(id) {
+            const p = promissorias.find(x => x.id === id);
+            if (!p) return;
+            editingPromId = id;
+            document.getElementById('p-pessoa').value = p.pessoa;
+            document.getElementById('p-desc').value = p.desc;
+            document.getElementById('p-origem').value = p.origem;
+            document.getElementById('p-data').value = p.data;
+            document.getElementById('p-n').value = p.pagamentos.length;
+            document.getElementById('p-valor').value = p.valorParcela;
+            document.getElementById('p-venc').value = p.primeiroVenc;
+            document.getElementById('p-form-title').textContent = 'Editando promissória';
+            document.getElementById('p-save-btn').textContent = '💾 Salvar alterações';
+            document.getElementById('p-cancel-btn').style.display = 'inline-block';
+            document.getElementById('tab-promissorias').scrollIntoView({ behavior: 'smooth' });
+        }
+        function cancelEditPromissoria() { resetPromForm(); }
+        function deletePromissoria(id) {
+            const p = promissorias.find(x => x.id === id);
+            if (!p || !confirm(`Excluir a promissória de ${p.pessoa} (${p.desc})?`)) return;
+            promissorias = promissorias.filter(x => x.id !== id);
+            if (editingPromId === id) resetPromForm();
+            saveData();
+            renderPromissoriasTab();
+        }
+        function togglePaga(id, idx, checked) {
+            const p = promissorias.find(x => x.id === id);
+            if (!p) return;
+            p.pagamentos[idx] = { pago: checked, data: checked ? (p.pagamentos[idx].data || todayISO()) : null };
+            openPromCards.add(id);
+            saveData();
+            renderPromissoriasTab();
+        }
+        function setDataPagamento(id, idx, value) {
+            const p = promissorias.find(x => x.id === id);
+            if (!p || !p.pagamentos[idx].pago) return;
+            p.pagamentos[idx].data = value || todayISO();
+            saveData();
+        }
+        function togglePromCard(id, open) { if (open) openPromCards.add(id); else openPromCards.delete(id); }
+
+        function renderPromissoriasTab() {
+            const origemSel = document.getElementById('p-origem');
+            if (!origemSel.options.length) {
+                origemSel.innerHTML = ORIGENS.map(o => `<option>${o}</option>`).join('');
+                resetPromForm();
+            }
+            const nomes = Array.from(new Set(people.concat(promissorias.map(p => p.pessoa)))).sort((a, b) => a.localeCompare(b));
+            document.getElementById('p-pessoas-list').innerHTML = nomes.map(n => `<option value="${esc(n)}">`).join('');
+
+            const box = document.getElementById('p-content');
+            if (promissorias.length === 0) {
+                box.innerHTML = '<div class="ca-empty">Nenhuma promissória registrada. Use o formulário acima para adicionar.</div>';
+                return;
+            }
+            const all = promissorias.map(p => ({ p, r: promResumo(p) }));
+            const aberto = all.filter(x => !x.r.quitada);
+            const aReceber = aberto.reduce((a, x) => a + x.r.falta, 0);
+            const recebido = all.reduce((a, x) => a + x.r.pago, 0);
+            const atrasoN = all.reduce((a, x) => a + x.r.atrasadas, 0);
+            const atrasoV = all.reduce((a, x) => a + x.r.atrasadas * x.p.valorParcela, 0);
+
+            // resumo por pessoa
+            const porPessoa = {};
+            all.forEach(({ p, r }) => {
+                const o = porPessoa[p.pessoa] || (porPessoa[p.pessoa] = { total: 0, pago: 0, falta: 0, restantes: 0, atrasadas: 0, ativas: 0 });
+                o.total += r.total; o.pago += r.pago; o.falta += r.falta; o.restantes += r.faltam; o.atrasadas += r.atrasadas;
+                if (!r.quitada) o.ativas++;
+            });
+            const pessoasOrd = Object.keys(porPessoa).sort((a, b) => porPessoa[b].falta - porPessoa[a].falta);
+
+            const filtered = all.filter(x =>
+                (promFilterPessoa === '__todas' || x.p.pessoa === promFilterPessoa) &&
+                (promFilterStatus === 'todas' || (promFilterStatus === 'aberto' ? !x.r.quitada : x.r.quitada))
+            ).sort((a, b) => a.r.quitada - b.r.quitada || b.r.atrasadas - a.r.atrasadas || b.p.data.localeCompare(a.p.data));
+
+            box.innerHTML = `
+                <div class="ca-metrics">
+                    <div class="ca-metric"><div class="ca-metric-label">A receber</div><div class="ca-metric-value highlight">${fmt(aReceber)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Já recebido</div><div class="ca-metric-value" style="color:#27500A">${fmt(recebido)}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Em atraso</div><div class="ca-metric-value ${atrasoN ? 'highlight' : ''}">${atrasoN ? fmt(atrasoV) : 'Nenhuma'}</div></div>
+                    <div class="ca-metric"><div class="ca-metric-label">Promissórias em aberto</div><div class="ca-metric-value">${aberto.length}</div></div>
+                </div>
+                ${atrasoN ? `<div class="ca-alert-box"><div class="ca-alert-text"><strong>⚠️ ${atrasoN} parcela${atrasoN > 1 ? 's' : ''} em atraso</strong>, somando ${fmt(atrasoV)}.</div></div>` : ''}
+                <div class="ca-card">
+                    <p class="ca-card-title">Quanto cada pessoa deve</p>
+                    <div style="overflow-x:auto">
+                    <table class="ca-table">
+                        <thead><tr><th>Pessoa</th><th class="num">Total</th><th class="num">Pago</th><th class="num">Falta</th><th class="num">Parcelas restantes</th><th class="num">Em atraso</th></tr></thead>
+                        <tbody>
+                            ${pessoasOrd.map(n => { const o = porPessoa[n]; return `
+                                <tr style="cursor:pointer" data-p="${esc(n)}" onclick="promFilterPessoa = this.dataset.p; renderPromissoriasTab();">
+                                    <td><strong>${esc(n)}</strong></td>
+                                    <td class="num">${fmt(o.total)}</td>
+                                    <td class="num" style="color:#27500A">${fmt(o.pago)}</td>
+                                    <td class="num" style="color:${o.falta > 0 ? '#A32D2D' : 'inherit'};font-weight:600">${fmt(o.falta)}</td>
+                                    <td class="num">${o.restantes}</td>
+                                    <td class="num">${o.atrasadas ? `<span class="st atrasada">${o.atrasadas}</span>` : '-'}</td>
+                                </tr>`; }).join('')}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+                <div class="ca-card">
+                    <p class="ca-card-title"><span>Promissórias</span></p>
+                    <div class="fm-actions" style="margin-bottom:12px">
+                        <select class="fm-field" style="padding:7px 10px;border:1px solid var(--ca-border2);border-radius:6px;font-size:13px" onchange="promFilterPessoa = this.value; renderPromissoriasTab();">
+                            <option value="__todas">Todas as pessoas</option>
+                            ${pessoasOrd.map(n => `<option value="${esc(n)}" ${n === promFilterPessoa ? 'selected' : ''}>${esc(n)}</option>`).join('')}
+                        </select>
+                        <select style="padding:7px 10px;border:1px solid var(--ca-border2);border-radius:6px;font-size:13px" onchange="promFilterStatus = this.value; renderPromissoriasTab();">
+                            <option value="aberto" ${promFilterStatus === 'aberto' ? 'selected' : ''}>Em aberto</option>
+                            <option value="quitadas" ${promFilterStatus === 'quitadas' ? 'selected' : ''}>Quitadas</option>
+                            <option value="todas" ${promFilterStatus === 'todas' ? 'selected' : ''}>Todas</option>
+                        </select>
+                    </div>
+                    ${filtered.length === 0 ? '<div class="ca-empty">Nenhuma promissória com esses filtros.</div>' : filtered.map(({ p, r }) => `
+                        <div class="pr-card ${r.quitada ? 'quitada' : ''}">
+                            <div class="pr-head">
+                                <div>
+                                    <div class="pr-title">${esc(p.pessoa)} · ${esc(p.desc)}<span class="pr-origem">${esc(p.origem)}</span>${r.quitada ? ' <span class="st paga">Quitada</span>' : ''}</div>
+                                    <div class="pr-sub">Feita em ${fmtDate(p.data)} · ${r.n}x de ${fmt(p.valorParcela)} · total ${fmt(r.total)}</div>
+                                </div>
+                                <div>
+                                    <button class="ic-btn" title="Editar" onclick="editPromissoria(${p.id})">✎</button>
+                                    <button class="ic-btn" title="Excluir" onclick="deletePromissoria(${p.id})">🗑</button>
+                                </div>
+                            </div>
+                            <div class="pr-progress"><div style="width:${(r.pagas / r.n * 100).toFixed(1)}%"></div></div>
+                            <div class="pr-nums">
+                                <span><strong>${r.pagas}</strong> de ${r.n} pagas</span>
+                                <span>Faltam <strong>${r.faltam}</strong> parcela${r.faltam === 1 ? '' : 's'}</span>
+                                <span>Saldo devedor <strong style="color:${r.falta > 0 ? '#A32D2D' : 'inherit'}">${fmt(r.falta)}</strong></span>
+                                ${r.atrasadas ? `<span class="st atrasada">${r.atrasadas} em atraso</span>` : ''}
+                            </div>
+                            <details class="pr-parcelas" ${openPromCards.has(p.id) ? 'open' : ''} ontoggle="togglePromCard(${p.id}, this.open)">
+                                <summary>Ver parcelas e marcar pagamentos</summary>
+                                ${p.pagamentos.map((pg, i) => {
+                                    const venc = addMonthsISO(p.primeiroVenc, i);
+                                    const st = parcelaStatus(pg, venc);
+                                    return `
+                                    <div class="pr-row">
+                                        <input type="checkbox" ${pg.pago ? 'checked' : ''} onchange="togglePaga(${p.id}, ${i}, this.checked)" title="Marcar como paga">
+                                        <span>Parcela ${i + 1}/${r.n} · ${fmt(p.valorParcela)} <span style="color:var(--ca-sec);font-size:12px">· vence ${fmtDate(venc)}</span></span>
+                                        <span>${pg.pago ? `<input type="date" value="${pg.data || ''}" title="Data do pagamento" onchange="setDataPagamento(${p.id}, ${i}, this.value)">` : ''}</span>
+                                        <span class="st ${st}">${st === 'paga' ? 'Paga' : st === 'atrasada' ? 'Atrasada' : 'A vencer'}</span>
+                                    </div>`; }).join('')}
+                            </details>
+                        </div>`).join('')}
+                </div>`;
+        }
+
+        document.getElementById('g-forma').innerHTML = FORMAS.map(f => `<option>${f}</option>`).join('');
+        resetGastoForm();
+        if (cloudMode) {
+            let saved = null;
+            try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY) || 'null'); } catch (e) {}
+            if (saved && saved.nome && saved.codigo) { showLogin(''); document.getElementById('login-msg').textContent = 'Conectando...'; doLogin(false, saved); }
+            else showLogin('');
+        } else {
+            applyState(readLocalState() || {});
+            lastLocal = JSON.stringify(getState());
+            renderPeoplePanel();
+            selectLatestFatura();
+        }
+        document.getElementById('search').addEventListener('input', renderList);
+        document.getElementById('filter-category').addEventListener('change', renderList);
+        document.getElementById('new-person-name').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addNewPerson();
+        });
+    </script>
+</body>
+</html>
