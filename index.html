@@ -287,6 +287,14 @@
         .monthnav { display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
         .monthnav select { padding: 7px 10px; border: 1px solid var(--ca-border2); border-radius: 6px; font-size: 13px; }
         .monthnav button { padding: 6px 10px; border: 1px solid var(--ca-border2); background: white; border-radius: 6px; cursor: pointer; }
+        .tipo-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; margin-left: 4px; vertical-align: middle; }
+        .tipo-badge.rec { background: #EDE7F6; color: #4527A0; }
+        .tipo-badge.parc { background: #FFF3E0; color: #B45309; }
+        .tipo-badge.fim { background: #eee; color: #666; }
+        .credor { font-size: 11px; color: var(--ca-sec); }
+        .fx-sum { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        .fx-sum div { background: var(--ca-bg2); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--ca-sec); }
+        .fx-sum strong { display: block; font-size: 16px; color: var(--ca-text); }
         .forma-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--ca-bg2); }
         .pr-card { border: 0.5px solid var(--ca-border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
         .pr-card.quitada { opacity: 0.7; }
@@ -464,18 +472,34 @@
             <div id="tab-gastos" class="ca-scope" style="display:none;">
                 <div class="ca-header">
                     <h1>Meus gastos fora do cartão</h1>
-                    <p>Dinheiro, Pix, débito e outros pagamentos. Gastos parcelados aparecem em cada mês, uma parcela por mês.</p>
+                    <p>Dinheiro, Pix, débito e outros pagamentos. Parcelados aparecem uma parcela por mês; recorrentes entram todo mês até você encerrar.</p>
                 </div>
                 <div class="ca-card">
                     <p class="ca-card-title" id="g-form-title">Novo gasto</p>
                     <div class="fm-grid">
-                        <div class="fm-field"><label>Data</label><input type="date" id="g-data"></div>
-                        <div class="fm-field wide"><label>O que foi</label><input type="text" id="g-desc" placeholder="Ex.: Feira, gasolina, presente"></div>
-                        <div class="fm-field"><label>Valor total (R$)</label><input type="number" id="g-valor" step="0.01" min="0" placeholder="0,00"></div>
+                        <div class="fm-field"><label>Tipo</label>
+                            <select id="g-tipo" onchange="updateGastoForm()">
+                                <option value="avista">À vista</option>
+                                <option value="parcelado">Parcelado</option>
+                                <option value="recorrente">Recorrente (todo mês)</option>
+                            </select>
+                        </div>
+                        <div class="fm-field"><label id="g-data-lbl">Data</label><input type="date" id="g-data" oninput="updateGastoForm()"></div>
+                        <div class="fm-field wide"><label>O que foi</label><input type="text" id="g-desc" placeholder="Ex.: Feira, parcela da moto, Netflix" oninput="updateGastoForm()"></div>
+                        <div class="fm-field g-parc-only"><label>Valor informado</label>
+                            <select id="g-modo" onchange="updateGastoForm()">
+                                <option value="parcela">Valor de cada parcela</option>
+                                <option value="total">Valor total da compra</option>
+                            </select>
+                        </div>
+                        <div class="fm-field"><label id="g-valor-lbl">Valor (R$)</label><input type="number" id="g-valor" step="0.01" min="0" placeholder="0,00" oninput="updateGastoForm()"></div>
+                        <div class="fm-field g-parc-only"><label>Parcela atual</label><input type="number" id="g-patual" min="1" max="120" step="1" value="1" oninput="updateGastoForm()"></div>
+                        <div class="fm-field g-parc-only"><label>Total de parcelas</label><input type="number" id="g-parc" min="2" max="120" step="1" value="2" oninput="updateGastoForm()"></div>
                         <div class="fm-field"><label>Forma de pagamento</label><select id="g-forma"></select></div>
                         <div class="fm-field"><label>Categoria</label><select id="g-cat" onchange="if(this.value==='__nova'){ const n = promptNewCategory(); renderGastoCatSelect(n || ''); }"></select></div>
-                        <div class="fm-field"><label>Parcelas</label><input type="number" id="g-parc" min="1" max="72" step="1" value="1"></div>
+                        <div class="fm-field wide"><label>Para quem pago (opcional)</label><input type="text" id="g-credor" list="g-credor-list" placeholder="Banco, loja ou pessoa"><datalist id="g-credor-list"></datalist></div>
                     </div>
+                    <p class="fm-hint" id="g-preview" style="margin-bottom:10px"></p>
                     <div class="fm-actions">
                         <button class="fm-btn" id="g-save-btn" onclick="saveGasto()">➕ Adicionar gasto</button>
                         <button class="fm-btn sec" id="g-cancel-btn" style="display:none" onclick="cancelEditGasto()">Cancelar edição</button>
@@ -1746,7 +1770,7 @@
 
         // ===================== ESTADO E ARMAZENAMENTO =====================
         // Modo local: tudo no navegador. Modo planilha: tudo numa aba da planilha Google, por usuário.
-        const PLANILHA_URL = 'https://script.google.com/macros/s/AKfycbzUCK68sjy7KYrUUN9BauIf4daq6SXr9lOeGkqsfVK4YI8HZdIUBVA1RiXRubMPwRqQSg/exec'
+        const PLANILHA_URL = 'https://script.google.com/macros/s/AKfycbzUCK68sjy7KYrUUN9BauIf4daq6SXr9lOeGkqsfVK4YI8HZdIUBVA1RiXRubMPwRqQSg/exec'; // URL do Apps Script: todos já entram conectados
         const URL_KEY = 'analiseNubank.planilhaUrl.v1';
         const SESSION_KEY = 'analiseNubank.sessao.v1';
         function getSheetUrl() { return PLANILHA_URL || localStorage.getItem(URL_KEY) || ''; }
@@ -1811,13 +1835,23 @@
         // ---------- Planilha Google (Apps Script) ----------
         async function callSheet(acao, extra) {
             const body = Object.assign({ acao, nome: session && session.nome, codigo: session && session.codigo }, extra || {});
-            const res = await fetch(getSheetUrl(), {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(body)
-            });
-            if (!res.ok) throw new Error('A planilha respondeu com erro ' + res.status);
-            return res.json();
+            let res;
+            try {
+                res = await fetch(getSheetUrl(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(body)
+                });
+            } catch (e) {
+                throw new Error('Sem resposta da planilha. Confira a internet e se a implantação do Apps Script está com "Quem pode acessar: Qualquer pessoa" (abra a URL numa janela anônima: não pode pedir login do Google).');
+            }
+            const txt = await res.text();
+            try { return JSON.parse(txt); }
+            catch (e) {
+                throw new Error(/accounts\.google|signin|<html|<!doctype/i.test(txt)
+                    ? 'A planilha devolveu uma página em vez de dados (geralmente a tela de login do Google). Na implantação, use "Executar como: Eu" e "Quem pode acessar: Qualquer pessoa", e publique uma nova versão.'
+                    : 'Resposta inesperada da planilha (erro ' + res.status + ').');
+            }
         }
         function setSyncStatus(kind, extra) {
             const el = document.getElementById('sync-status');
@@ -1996,16 +2030,52 @@
 
         // ---------- Meus gastos ----------
         // Cada gasto parcelado vira uma parcela por mês a partir da data
+        function gastoTipo(g) { return g.tipo || ((g.parcelas || 1) > 1 ? 'parcelado' : 'avista'); }
+        function monthDiff(a, b) {
+            const [ay, am] = a.split('-').map(Number), [by, bm] = b.split('-').map(Number);
+            return (by - ay) * 12 + (bm - am);
+        }
+        function mesCurto(ym) { const [y, m] = ym.split('-').map(Number); return `${MES_ABREV[m - 1]}/${y}`; }
+        function parcelValues(g) {
+            const n = Math.max(1, g.parcelas || 1);
+            return g.modoValor === 'parcela' && g.valorParcela ? Array(n).fill(g.valorParcela) : splitCents(g.valor, n);
+        }
+
+        // Cada gasto vira os lançamentos de cada mês: parcelado = uma parcela por mês a partir da parcela atual;
+        // recorrente = todo mês desde o início até ser encerrado
         function gastosDoMes(month) {
             const out = [];
+            const curM = todayISO().slice(0, 7);
             gastos.forEach(g => {
+                const tipo = gastoTipo(g);
+                const base = { id: g.id, forma: g.forma, categoria: g.categoria, credor: g.credor || '', tipo, g };
+                if (tipo === 'recorrente') {
+                    const start = g.data.slice(0, 7);
+                    const end = g.encerradoEm || null;
+                    let months;
+                    if (month === '__todos') {
+                        const last = end && end < curM ? end : (start > curM ? start : curM);
+                        months = [];
+                        for (let i = 0; i <= monthDiff(start, last); i++) months.push(addMonthsISO(start + '-01', i).slice(0, 7));
+                    } else months = [month];
+                    months.forEach(m => {
+                        if (m < start || (end && m > end)) return;
+                        const k = monthDiff(start, m);
+                        out.push(Object.assign({}, base, { k, date: addMonthsISO(g.data, k), v: g.valor, label: g.desc }));
+                    });
+                    return;
+                }
                 const n = Math.max(1, g.parcelas || 1);
-                const vals = splitCents(g.valor, n);
-                for (let k = 0; k < n; k++) {
-                    const date = addMonthsISO(g.data, k);
+                const vals = parcelValues(g);
+                const k0 = Math.min(n, Math.max(1, g.parcelaInicial || 1)) - 1;
+                for (let k = k0; k < n; k++) {
+                    const date = addMonthsISO(g.data, k - k0);
                     if (month !== '__todos' && date.slice(0, 7) !== month) continue;
-                    out.push({ id: g.id, k, date, v: vals[k], forma: g.forma, categoria: g.categoria,
-                        label: n > 1 ? `${g.desc} · parcela ${k + 1}/${n}` : g.desc, g });
+                    out.push(Object.assign({}, base, {
+                        k, n, parcela: k + 1, date, v: vals[k],
+                        ultimoMes: addMonthsISO(g.data, n - 1 - k0).slice(0, 7),
+                        label: n > 1 ? `${g.desc} · parcela ${k + 1}/${n}` : g.desc
+                    }));
                 }
             });
             return out.sort((a, b) => b.date.localeCompare(a.date));
@@ -2031,27 +2101,71 @@
         }
         function resetGastoForm() {
             editingGastoId = null;
+            document.getElementById('g-tipo').value = 'avista';
             document.getElementById('g-data').value = todayISO();
             document.getElementById('g-desc').value = '';
             document.getElementById('g-valor').value = '';
-            document.getElementById('g-parc').value = 1;
+            document.getElementById('g-modo').value = 'parcela';
+            document.getElementById('g-patual').value = 1;
+            document.getElementById('g-parc').value = 2;
+            document.getElementById('g-credor').value = '';
             document.getElementById('g-form-title').textContent = 'Novo gasto';
             document.getElementById('g-save-btn').textContent = '➕ Adicionar gasto';
             document.getElementById('g-cancel-btn').style.display = 'none';
+            updateGastoForm();
         }
+
+        // Ajusta rótulos e campos conforme o tipo e mostra uma prévia de como o gasto vai entrar nos meses
+        function updateGastoForm() {
+            const tipo = document.getElementById('g-tipo').value;
+            const modo = document.getElementById('g-modo').value;
+            document.querySelectorAll('.g-parc-only').forEach(el => el.style.display = tipo === 'parcelado' ? '' : 'none');
+            document.getElementById('g-data-lbl').textContent = tipo === 'parcelado' ? 'Data da parcela atual' : tipo === 'recorrente' ? 'Primeira cobrança' : 'Data';
+            document.getElementById('g-valor-lbl').textContent = tipo === 'recorrente' ? 'Valor mensal (R$)'
+                : tipo === 'parcelado' ? (modo === 'parcela' ? 'Valor da parcela (R$)' : 'Valor total da compra (R$)') : 'Valor (R$)';
+            const data = document.getElementById('g-data').value;
+            const v = parseFloat(document.getElementById('g-valor').value);
+            const prev = document.getElementById('g-preview');
+            if (!data || !(v > 0) || tipo === 'avista') { prev.textContent = ''; return; }
+            const ym = data.slice(0, 7);
+            if (tipo === 'recorrente') {
+                prev.textContent = `🔁 Entra todo mês a partir de ${mesCurto(ym)}, ${fmt(v)} por mês, até você encerrar.`;
+                return;
+            }
+            const n = parseInt(document.getElementById('g-parc').value) || 0;
+            const a = parseInt(document.getElementById('g-patual').value) || 0;
+            if (n < 2 || a < 1 || a > n) { prev.textContent = '⚠️ A parcela atual precisa estar entre 1 e o total de parcelas (mínimo 2).'; return; }
+            const vp = modo === 'parcela' ? v : v / n;
+            const restantes = n - a + 1;
+            prev.textContent = `📅 Parcela ${a}/${n} em ${mesCurto(ym)} até a ${n}/${n} em ${mesCurto(addMonthsISO(data, n - a).slice(0, 7))}: ${restantes} parcela${restantes > 1 ? 's' : ''} de ${fmt(vp)}, restam ${fmt(vp * restantes)} a pagar.`;
+        }
+
         function saveGasto() {
+            const tipo = document.getElementById('g-tipo').value;
             const data = document.getElementById('g-data').value;
             const desc = document.getElementById('g-desc').value.trim();
-            const valor = parseFloat(document.getElementById('g-valor').value);
+            const v = parseFloat(document.getElementById('g-valor').value);
             const forma = document.getElementById('g-forma').value;
             const categoria = document.getElementById('g-cat').value;
-            const parcelas = Math.max(1, parseInt(document.getElementById('g-parc').value) || 1);
-            if (!data || !desc || !(valor > 0)) { alert('Preencha data, o que foi e um valor maior que zero.'); return; }
+            const credor = document.getElementById('g-credor').value.trim();
+            if (!data || !desc || !(v > 0)) { alert('Preencha data, o que foi e um valor maior que zero.'); return; }
             if (categoria === '__nova') { alert('Escolha uma categoria.'); return; }
-            const rec = { data, desc, valor: Math.round(valor * 100) / 100, forma, categoria, parcelas };
+            const valor = Math.round(v * 100) / 100;
+            const rec = { tipo, data, desc, forma, categoria, credor };
+            if (tipo === 'parcelado') {
+                const n = parseInt(document.getElementById('g-parc').value) || 0;
+                const a = parseInt(document.getElementById('g-patual').value) || 0;
+                if (n < 2 || a < 1 || a > n) { alert('Informe a parcela atual e o total de parcelas (ex.: 3 de 10).'); return; }
+                const modo = document.getElementById('g-modo').value;
+                Object.assign(rec, { parcelas: n, parcelaInicial: a, modoValor: modo,
+                    valorParcela: modo === 'parcela' ? valor : null,
+                    valor: modo === 'parcela' ? Math.round(valor * n * 100) / 100 : valor });
+            } else {
+                Object.assign(rec, { parcelas: 1, parcelaInicial: 1, modoValor: 'total', valorParcela: null, valor });
+            }
             if (editingGastoId !== null) {
                 const g = gastos.find(x => x.id === editingGastoId);
-                if (g) Object.assign(g, rec);
+                if (g) { Object.assign(g, rec); if (tipo !== 'recorrente') delete g.encerradoEm; }
             } else {
                 gastos.push({ id: Date.now(), ...rec });
             }
@@ -2065,23 +2179,46 @@
         function editGasto(id) {
             const g = gastos.find(x => x.id === id);
             if (!g) return;
+            const tipo = gastoTipo(g);
             editingGastoId = id;
+            document.getElementById('g-tipo').value = tipo;
             document.getElementById('g-data').value = g.data;
             document.getElementById('g-desc').value = g.desc;
-            document.getElementById('g-valor').value = g.valor;
+            const modo = g.modoValor === 'parcela' ? 'parcela' : 'total';
+            document.getElementById('g-modo').value = modo;
+            document.getElementById('g-valor').value = tipo === 'parcelado' && modo === 'parcela' ? g.valorParcela : g.valor;
+            document.getElementById('g-patual').value = g.parcelaInicial || 1;
+            document.getElementById('g-parc').value = Math.max(2, g.parcelas || 2);
             document.getElementById('g-forma').value = g.forma;
+            document.getElementById('g-credor').value = g.credor || '';
             renderGastoCatSelect(g.categoria);
-            document.getElementById('g-parc').value = g.parcelas || 1;
             document.getElementById('g-form-title').textContent = 'Editando gasto';
             document.getElementById('g-save-btn').textContent = '💾 Salvar alterações';
             document.getElementById('g-cancel-btn').style.display = 'inline-block';
+            updateGastoForm();
             document.getElementById('tab-gastos').scrollIntoView({ behavior: 'smooth' });
+        }
+        function toggleEncerrar(id) {
+            const g = gastos.find(x => x.id === id);
+            if (!g) return;
+            if (g.encerradoEm) {
+                if (!confirm(`Reativar "${g.desc}"? Ele volta a entrar todo mês.`)) return;
+                delete g.encerradoEm;
+            } else {
+                const m = gastosMonth === '__todos' ? todayISO().slice(0, 7) : gastosMonth;
+                if (!confirm(`Encerrar "${g.desc}"? Ele continua aparecendo até ${monthLabel(m).toLowerCase()} e deixa de entrar a partir do mês seguinte.`)) return;
+                g.encerradoEm = m;
+            }
+            saveData();
+            renderGastosTab();
         }
         function cancelEditGasto() { resetGastoForm(); }
         function deleteGasto(id) {
             const g = gastos.find(x => x.id === id);
             if (!g) return;
-            const msg = (g.parcelas || 1) > 1 ? `Excluir "${g.desc}"? As ${g.parcelas} parcelas serão removidas de todos os meses.` : `Excluir "${g.desc}"?`;
+            const tipo = gastoTipo(g);
+            const msg = tipo === 'recorrente' ? `Excluir "${g.desc}" de todos os meses, inclusive os anteriores? Para parar de cobrar só daqui para frente, use ⏹ Encerrar.`
+                : tipo === 'parcelado' ? `Excluir "${g.desc}"? Todas as parcelas serão removidas de todos os meses.` : `Excluir "${g.desc}"?`;
             if (!confirm(msg)) return;
             gastos = gastos.filter(x => x.id !== id);
             if (editingGastoId === id) resetGastoForm();
@@ -2093,6 +2230,8 @@
             document.getElementById('g-month').innerHTML = monthOptionsHtml();
             const sel = document.getElementById('g-cat');
             if (!sel.options.length) renderGastoCatSelect('Alimentação'); else renderGastoCatSelect();
+            const credores = Array.from(new Set(gastos.map(g => g.credor).filter(Boolean).concat(people))).sort((a, b) => a.localeCompare(b));
+            document.getElementById('g-credor-list').innerHTML = credores.map(c => `<option value="${esc(c)}">`).join('');
             const list = gastosDoMes(gastosMonth);
             const box = document.getElementById('g-content');
             if (list.length === 0) {
@@ -2107,7 +2246,42 @@
             list.forEach(g => byCat[g.categoria] = (byCat[g.categoria] || 0) + g.v);
             const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
             const maxC = Math.max(...cats.map(c => c[1]), 0.01);
-            const parceladosAtivos = list.filter(g => (g.g.parcelas || 1) > 1).length;
+            const parceladosAtivos = list.filter(g => g.tipo === 'parcelado').length;
+
+            // ---- Compromissos fixos do mês ----
+            const mesFx = gastosMonth === '__todos' ? todayISO().slice(0, 7) : gastosMonth;
+            const fixos = (gastosMonth === '__todos' ? gastosDoMes(mesFx) : list).filter(x => x.tipo !== 'avista');
+            const recV = fixos.filter(x => x.tipo === 'recorrente').reduce((a, x) => a + x.v, 0);
+            const parV = fixos.filter(x => x.tipo === 'parcelado').reduce((a, x) => a + x.v, 0);
+            const porCredor = {};
+            fixos.forEach(x => { if (x.credor) porCredor[x.credor] = (porCredor[x.credor] || 0) + x.v; });
+            const fixosHtml = !fixos.length ? '' : `
+                <div class="ca-card">
+                    <p class="ca-card-title">Compromissos fixos de ${monthLabel(mesFx).toLowerCase()}</p>
+                    <div class="fx-sum">
+                        <div>🔁 Recorrentes<strong>${fmt(recV)}</strong></div>
+                        <div>📅 Parcelas<strong>${fmt(parV)}</strong></div>
+                        <div>Total fixo no mês<strong style="color:#A32D2D">${fmt(recV + parV)}</strong></div>
+                    </div>
+                    <div style="overflow-x:auto">
+                    <table class="ca-table">
+                        <thead><tr><th>O que é</th><th>Tipo</th><th>Para quem</th><th class="num">Valor no mês</th><th>Até</th></tr></thead>
+                        <tbody>
+                            ${fixos.sort((a, b) => b.v - a.v).map(x => `
+                                <tr>
+                                    <td>${esc(x.g.desc)}</td>
+                                    <td>${x.tipo === 'recorrente' ? '<span class="tipo-badge rec">🔁 Recorrente</span>' : `<span class="tipo-badge parc">Parcela ${x.parcela}/${x.n}</span>`}</td>
+                                    <td>${x.credor ? esc(x.credor) : '<span style="color:var(--ca-sec)">-</span>'}</td>
+                                    <td class="num">${fmt(x.v)}</td>
+                                    <td style="white-space:nowrap">${x.tipo === 'recorrente'
+                                        ? (x.g.encerradoEm ? 'encerra em ' + mesCurto(x.g.encerradoEm) : 'sem fim')
+                                        : `${mesCurto(x.ultimoMes)} <span style="color:var(--ca-sec);font-size:11px">(faltam ${x.n - x.parcela} depois desta)</span>`}</td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                    </div>
+                    ${Object.keys(porCredor).length ? `<p class="fm-hint" style="margin-top:10px"><strong>Por credor:</strong> ${Object.entries(porCredor).sort((a, b) => b[1] - a[1]).map(([c, v]) => `${esc(c)} ${fmt(v)}`).join(' · ')}</p>` : ''}
+                </div>`;
 
             box.innerHTML = `
                 <div class="ca-metrics">
@@ -2116,6 +2290,7 @@
                         <div class="ca-metric"><div class="ca-metric-label">${FORMA_ICON[f]} ${f}</div><div class="ca-metric-value">${fmt(porForma[f] || 0)}</div></div>`).join('')}
                     <div class="ca-metric"><div class="ca-metric-label">Lançamentos</div><div class="ca-metric-value">${list.length}</div></div>
                 </div>
+                ${fixosHtml}
                 <div class="ca-card">
                     <p class="ca-card-title">Por categoria</p>
                     <div class="ca-bar-list">
@@ -2131,21 +2306,23 @@
                     <p class="ca-card-title"><span>Lançamentos de ${monthLabel(gastosMonth).toLowerCase()}</span>${parceladosAtivos ? `<span style="text-transform:none;letter-spacing:0">${parceladosAtivos} parcela${parceladosAtivos > 1 ? 's' : ''} de compras parceladas</span>` : ''}</p>
                     <div style="overflow-x:auto">
                     <table class="ca-table">
-                        <thead><tr><th>Data</th><th>O que foi</th><th>Categoria</th><th>Forma</th><th class="num">Valor</th><th></th></tr></thead>
+                        <thead><tr><th>Data</th><th>O que foi</th><th>Para quem</th><th>Categoria</th><th>Forma</th><th class="num">Valor</th><th></th></tr></thead>
                         <tbody>
                             ${list.map(g => `
                                 <tr>
                                     <td style="white-space:nowrap">${fmtDate(g.date)}</td>
-                                    <td>${esc(g.label)}${(g.g.parcelas || 1) > 1 ? `<div style="font-size:11px;color:var(--ca-sec)">Total ${fmt(g.g.valor)} em ${g.g.parcelas}x</div>` : ''}</td>
+                                    <td>${esc(g.label)}${g.tipo === 'recorrente' ? `<span class="tipo-badge ${g.g.encerradoEm ? 'fim' : 'rec'}">${g.g.encerradoEm ? 'encerra ' + mesCurto(g.g.encerradoEm) : '🔁 recorrente'}</span>` : ''}${g.tipo === 'parcelado' ? `<div style="font-size:11px;color:var(--ca-sec)">${g.n - g.parcela === 0 ? 'Última parcela' : `Faltam ${g.n - g.parcela} depois desta, até ${mesCurto(g.ultimoMes)}`}</div>` : ''}</td>
+                                    <td class="credor">${g.credor ? esc(g.credor) : '-'}</td>
                                     <td><span class="ca-cat-dot" style="display:inline-block;background:${catColor(g.categoria)};margin-right:6px;vertical-align:middle"></span>${esc(g.categoria)}</td>
                                     <td><span class="forma-badge">${FORMA_ICON[g.forma] || ''} ${esc(g.forma)}</span></td>
                                     <td class="num">${fmt(g.v)}</td>
                                     <td style="white-space:nowrap;text-align:right">
+                                        ${g.tipo === 'recorrente' ? `<button class="ic-btn" title="${g.g.encerradoEm ? 'Reativar' : 'Encerrar a partir do próximo mês'}" onclick="toggleEncerrar(${g.id})">${g.g.encerradoEm ? '▶' : '⏹'}</button>` : ''}
                                         <button class="ic-btn" title="Editar" onclick="editGasto(${g.id})">✎</button>
                                         <button class="ic-btn" title="Excluir" onclick="deleteGasto(${g.id})">🗑</button>
                                     </td>
                                 </tr>`).join('')}
-                            <tr class="ca-total-row"><td colspan="4">TOTAL</td><td class="num" style="color:#A32D2D">${fmt(total)}</td><td></td></tr>
+                            <tr class="ca-total-row"><td colspan="5">TOTAL</td><td class="num" style="color:#A32D2D">${fmt(total)}</td><td></td></tr>
                         </tbody>
                     </table>
                     </div>
